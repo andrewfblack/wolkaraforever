@@ -57,6 +57,8 @@ wolkaraforever/WoW/CurseForgeClient.h launcher/WoW/CurseForgeClient.h add
 wolkaraforever/WoW/CurseForgeClient.m launcher/WoW/CurseForgeClient.m add
 wolkaraforever/WoW/DeviceProfile.h launcher/WoW/DeviceProfile.h add
 wolkaraforever/WoW/DeviceProfile.m launcher/WoW/DeviceProfile.m add
+wolkaraforever/WoW/ExternalStorageProbe.h launcher/WoW/ExternalStorageProbe.h add
+wolkaraforever/WoW/ExternalStorageProbe.m launcher/WoW/ExternalStorageProbe.m add
 wolkaraforever/WoW/ForeverUI.h launcher/WoW/ForeverUI.h add
 wolkaraforever/WoW/ForeverUI.m launcher/WoW/ForeverUI.m add
 wolkaraforever/WoW/ForeverUIArchive.swift launcher/WoW/ForeverUIArchive.swift add
@@ -74,6 +76,7 @@ wolkaraforever/WoW/tests/test_addon_archive.swift tests/test_addon_archive.swift
 wolkaraforever/WoW/tests/test_addon_import.m tests/test_addon_import.m add
 wolkaraforever/WoW/tests/test_curseforge.m tests/test_curseforge.m add
 wolkaraforever/WoW/tests/test_device_profile.m tests/test_device_profile.m add
+wolkaraforever/WoW/tests/test_external_storage_probe.m tests/test_external_storage_probe.m add
 wolkaraforever/WoW/tests/test_forever_config.m tests/test_forever_config.m add
 wolkaraforever/WoW/tests/test_forever_ui_archive.swift tests/test_forever_ui_archive.swift add
 wolkaraforever/WoW/tests/test_wow_client.m tests/test_wow_client.m add

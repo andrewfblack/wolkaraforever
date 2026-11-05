@@ -134,6 +134,12 @@
 "home.settings.manageAddons" = "Add-ons verwalten";
 "home.settings.repair" = "Spieldateien prüfen und reparieren";
 "home.settings.diagnostics" = "Diagnose und Protokolle";
+"home.storage.choose" = "Speicherordner prüfen (keine Spieldateien verschoben)";
+"home.storage.check" = "Ausgewählten Speicherordner erneut prüfen";
+"home.storage.available" = "Ordner ist erreichbar";
+"home.storage.unavailable" = "Ordner ist nicht erreichbar";
+"home.storage.unknown" = "Der Ordner konnte nicht geprüft werden.";
+"home.storage.result" = "%1$@ — %2$@-Dateisystem, %3$.1f GB frei. Dies ist nur eine Leseprüfung; die Spieldateien bleiben auf dem iPad. Erreichbarkeit beweist keine Kompatibilität mit Updates oder dem Spiel.";
 "home.settings.about" = "Über diese App und Open-Source-Lizenzen";
 "home.settings.technical" = "Technische Angaben";
 "home.settings.details.title" = "Angaben";

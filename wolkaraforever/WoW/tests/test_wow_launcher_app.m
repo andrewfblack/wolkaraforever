@@ -33,6 +33,7 @@
 - (void)render;
 - (void)choosePreference:(BOOL)region;
 - (void)documentPicker:(UIDocumentPickerViewController *)controller didPickDocumentsAtURLs:(NSArray<NSURL *> *)urls;
+- (void)documentPickerWasCancelled:(UIDocumentPickerViewController *)controller;
 - (BOOL)foreverActionAllowed;
 - (NSString *)foreverWorkingDirectory;
 - (void)preferences;
@@ -1698,7 +1699,8 @@ static NSArray<NSString *> *VisibleTexts(UIView *view) {
     assert([sheet.message containsString:@"Aktualisierungen werden automatisch installiert"]);
     NSArray *titles = [sheet.actions valueForKey:@"title"];
     for (NSString *expected in @[@"Add-ons verwalten", @"Spieldateien prüfen und reparieren",
-                                 @"Diagnose und Protokolle", @"Über diese App und Open-Source-Lizenzen",
+                                  @"Diagnose und Protokolle", @"Speicherordner prüfen (keine Spieldateien verschoben)",
+                                  @"Über diese App und Open-Source-Lizenzen",
                                  @"Abbrechen"])
         assert([titles containsObject:expected]);
     [self dismissPresented];
@@ -1901,9 +1903,28 @@ static NSArray<NSString *> *VisibleTexts(UIView *view) {
     assert([settings isKindOfClass:UIAlertController.class]);
     assert([settings.title isEqual:@"Settings"]);
     assert(CancelActions(settings) == 1);
-    assert([[settings.actions valueForKey:@"title"] isEqualToArray:
-        (@[@"Manage add-ons", @"Verify and repair game files", @"Diagnostics and logs",
-           @"About and open-source licenses", @"Cancel"])]);
+    NSArray *titles=[settings.actions valueForKey:@"title"];
+    assert([titles containsObject:@"Manage add-ons"]);
+    assert([titles containsObject:@"Verify and repair game files"]);
+    assert([titles containsObject:@"Diagnostics and logs"]);
+    assert([titles containsObject:@"Probe a storage folder (no game files moved)"]);
+    assert([titles containsObject:@"About and open-source licenses"]);
+    // The probe picker opens without changing the install or requiring a drive.
+    UIAlertAction *probeAction=nil;
+    for (UIAlertAction *action in settings.actions)
+        if ([action.title isEqual:@"Probe a storage folder (no game files moved)"]) probeAction=action;
+    assert(probeAction);
+    [self.controller dismissViewControllerAnimated:NO completion:nil];
+    RunAction(probeAction);
+    assert(PumpUntil(^{ return [self.controller.presentedViewController isKindOfClass:UIDocumentPickerViewController.class]; }, 4));
+    UIViewController *picker=self.controller.presentedViewController;
+    assert([picker isKindOfClass:UIDocumentPickerViewController.class]);
+    [self.controller documentPickerWasCancelled:(UIDocumentPickerViewController *)picker];
+    [self.controller dismissViewControllerAnimated:NO completion:nil];
+    TapBarItem(gear);
+    Pump(0.7);
+    settings=(id)self.controller.presentedViewController;
+    assert([settings isKindOfClass:UIAlertController.class]);
     // Diagnostics, from the sheet: the block the item is wired to is the one that runs.
     __block NSInteger diagnostics = 0;
     self.controller.showDiagnostics = ^{ diagnostics++; };

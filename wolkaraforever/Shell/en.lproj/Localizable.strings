@@ -134,6 +134,12 @@
 "home.settings.manageAddons" = "Manage add-ons";
 "home.settings.repair" = "Verify and repair game files";
 "home.settings.diagnostics" = "Diagnostics and logs";
+"home.storage.choose" = "Probe a storage folder (no game files moved)";
+"home.storage.check" = "Check selected storage folder";
+"home.storage.available" = "Folder is accessible";
+"home.storage.unavailable" = "Folder is unavailable";
+"home.storage.unknown" = "The folder could not be checked.";
+"home.storage.result" = "%1$@ — %2$@ filesystem, %3$.1f GB free. This is a read-only check; game files still use iPad storage. Availability does not prove update or game compatibility.";
 "home.settings.about" = "About and open-source licenses";
 "home.settings.technical" = "Technical details";
 "home.settings.details.title" = "Details";

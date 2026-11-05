@@ -18,6 +18,13 @@ prepares a launch. The screen stays awake during a file check. Brief interruptio
 such as opening Control Centre do not cancel it. Switching to another app pauses
 unfinished work; returning to the home page resumes it without starting the game.
 
+**Experimental storage probe (read-only):** In **Settings**, choose **Probe a storage folder**
+and select a folder on a connected drive in Files. The app reports whether it can access the
+folder, its filesystem type and available space. **Check selected storage folder** repeats
+the check after restarting the app or reconnecting the drive. No game files are moved or
+written by this probe; choosing a folder does **not** change where Install or Play looks
+for the game. An accessible folder is not proof that the drive can support updates or play.
+
 The first check of an imported installation still reads its game data. Later
 updates reuse checks for unchanged files, and long checks save their progress
 periodically so an unexpected app closure does not discard the whole scan.

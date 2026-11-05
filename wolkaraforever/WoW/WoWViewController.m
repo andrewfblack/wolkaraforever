@@ -8,6 +8,7 @@
 #import "../App/WKLocalization.h"
 #import "Installation.h"
 #import "DeviceProfile.h"
+#import "ExternalStorageProbe.h"
 #import "ForeverUI.h"
 #import "Updater.h"
 #import "../App/LaunchProgressView.h"
@@ -161,6 +162,7 @@ static NSNotificationName const TKForeverLayoutDidChange = @"AKGamepadLayoutDidC
     NSMutableDictionary<NSString *, UILabel *> *_headings;
     TKWoWSwitchRow *_gamepadRow, *_overlayRow;
     NSString *_backupsDirectory;
+    UIDocumentPickerViewController *_storagePicker;
     UIView *_markView;
     NSLayoutConstraint *_markCap;
     UIBarButtonItem *_refreshItem;
@@ -1049,6 +1051,15 @@ static NSNotificationName const TKForeverLayoutDidChange = @"AKGamepadLayoutDidC
     [sheet addAction:[UIAlertAction actionWithTitle:WKLocalized(@"home.settings.diagnostics") style:UIAlertActionStyleDefault handler:^(UIAlertAction *a) {
         (void)a; [self diagnostics];
     }]];
+    if (!_busy && !_starting && !_sessionUsed && !_uiOperation) {
+        [sheet addAction:[UIAlertAction actionWithTitle:WKLocalized(@"home.storage.choose") style:UIAlertActionStyleDefault handler:^(UIAlertAction *a) {
+            (void)a; [self chooseStorageProbeFolder];
+        }]];
+        if ([TKExternalStorageProbe hasSelection])
+            [sheet addAction:[UIAlertAction actionWithTitle:WKLocalized(@"home.storage.check") style:UIAlertActionStyleDefault handler:^(UIAlertAction *a) {
+                (void)a; [self checkStorageProbeFolder];
+            }]];
+    }
     [sheet addAction:[UIAlertAction actionWithTitle:WKLocalized(@"home.settings.about") style:UIAlertActionStyleDefault handler:^(UIAlertAction *a) {
         (void)a; [self about];
     }]];
@@ -1060,6 +1071,34 @@ static NSNotificationName const TKForeverLayoutDidChange = @"AKGamepadLayoutDidC
                      message:self->_startupFailure?:(self->_error?:self->_installation.error).localizedDescription];
     }]];
     [self presentSheet:sheet anchor:nil];
+}
+// This diagnostic never changes the install location or touches game data.
+- (void)chooseStorageProbeFolder {
+    if (_busy || _starting || _sessionUsed || _uiOperation) return;
+    UIDocumentPickerViewController *picker=[[UIDocumentPickerViewController alloc]
+        initForOpeningContentTypes:@[UTTypeFolder]];
+    picker.allowsMultipleSelection=NO;
+    picker.delegate=self;
+    _storagePicker=picker;
+    [self presentViewController:picker animated:YES completion:nil];
+}
+- (void)showStorageProbeResult:(NSDictionary<NSString *, id> *)result error:(NSError *)error {
+    if (!result) {
+        [self presentMessage:WKLocalized(@"home.storage.unavailable")
+                     message:error.localizedDescription?:WKLocalized(@"home.storage.unknown")];
+        return;
+    }
+    [self presentMessage:WKLocalized(@"home.storage.available")
+                 message:WKLocalizedFormat(@"home.storage.result",result[@"name"],
+                     result[@"filesystem"],[result[@"freeBytes"] unsignedLongLongValue]/1e9)];
+}
+- (void)checkStorageProbeFolder {
+    if (_busy || _starting || _sessionUsed || _uiOperation) return;
+    dispatch_async(dispatch_get_global_queue(QOS_CLASS_UTILITY,0),^{
+        NSError *error=nil;
+        NSDictionary *result=[TKExternalStorageProbe inspectSelectedFolder:&error];
+        dispatch_async(dispatch_get_main_queue(),^{ [self showStorageProbeResult:result error:error]; });
+    });
 }
 // Everything about dictation lives on its own screen: the button, the mode, and
 // what happens to the words afterwards.
@@ -1122,6 +1161,17 @@ static NSNotificationName const TKForeverLayoutDidChange = @"AKGamepadLayoutDidC
 // controls. The restore picker's choice is the snapshot to bring back, and only
 // a ZIP inside WTF/Backups is accepted - the archive checks the rest.
 - (void)documentPicker:(UIDocumentPickerViewController *)controller didPickDocumentsAtURLs:(NSArray<NSURL *> *)urls {
+    if (controller==_storagePicker) {
+        _storagePicker=nil;
+        if (!urls.count) return;
+        NSURL *selected=urls.firstObject;
+        dispatch_async(dispatch_get_global_queue(QOS_CLASS_UTILITY,0),^{
+            NSError *error=nil;
+            NSDictionary *result=[TKExternalStorageProbe selectFolder:selected error:&error];
+            dispatch_async(dispatch_get_main_queue(),^{ [self showStorageProbeResult:result error:error]; });
+        });
+        return;
+    }
     NSString *backups=_backupsDirectory;
     _backupsDirectory=nil;
     // Only the restore picker resumes a restore. Checking the picker's own
@@ -1139,7 +1189,7 @@ static NSNotificationName const TKForeverLayoutDidChange = @"AKGamepadLayoutDidC
     [self restoreBackupNamed:name];
 }
 - (void)documentPickerWasCancelled:(UIDocumentPickerViewController *)controller {
-    (void)controller;
+    if (controller==_storagePicker) { _storagePicker=nil; return; }
     _backupsDirectory=nil;
 }
 #pragma mark - Forever UI file operations

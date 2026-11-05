@@ -1,0 +1,13 @@
+#import <Foundation/Foundation.h>
+
+NS_ASSUME_NONNULL_BEGIN
+
+// Read-only folder probe. No game path is changed by selecting a folder.
+// A nil result means that the selection is missing, inaccessible or stale.
+@interface TKExternalStorageProbe : NSObject
++ (BOOL)hasSelection;
++ (nullable NSDictionary<NSString *, id> *)inspectSelectedFolder:(NSError **)error;
++ (nullable NSDictionary<NSString *, id> *)selectFolder:(NSURL *)url error:(NSError **)error;
+@end
+
+NS_ASSUME_NONNULL_END

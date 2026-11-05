@@ -1,0 +1,40 @@
+# Experimental, unsigned External JIT build for the storage probe branch.
+# No Apple signing credentials, game data or physical device are used here.
+name: External storage probe (unsigned)
+
+on:
+  push:
+    branches: [feature/external-game-storage]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: macos-26
+    steps:
+      - uses: actions/checkout@v5
+      - name: Install XcodeGen
+        run: brew install xcodegen
+      - name: Check docs and localization
+        run: |
+          wolkaraforever/tools/check_docs.sh
+          python3 wolkaraforever/tools/check_localization.py
+      - name: Test launcher and storage probe
+        run: wolkaraforever/tools/test_wow_launcher.sh
+      - name: Build unsigned External JIT IPA
+        run: TOLKARA_SYSTEM_ROOTS=NO wolkaraforever/tools/package_ipa.sh Tolkara-storage-probe-unsigned.ipa
+      - name: Upload IPA
+        uses: actions/upload-artifact@v4
+        with:
+          name: Tolkara-storage-probe-unsigned
+          path: Tolkara-storage-probe-unsigned.ipa
+          if-no-files-found: error
+      - name: Upload build logs on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: probe-build-logs
+          path: build/platform/logs/
+          if-no-files-found: ignore
