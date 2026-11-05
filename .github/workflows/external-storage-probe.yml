@@ -29,7 +29,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: Tolkara-storage-probe-unsigned
-          path: Tolkara-storage-probe-unsigned.ipa
+          path: build/platform/Tolkara-storage-probe-unsigned.ipa
           if-no-files-found: error
       - name: Upload build logs on failure
         if: failure()
