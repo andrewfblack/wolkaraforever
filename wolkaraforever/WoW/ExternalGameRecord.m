@@ -114,7 +114,7 @@ static NSString *TKGameRoot(NSString *folderPath,NSString *rootRelative) {
         TKRecordError(error,@"External game storage is unavailable."); return nil;
     }
     NSString *rootRelative=record[@"root"];
-    if (rootRelative && (![rootRelative isKindOfClass:NSString.class] || ![TKSafeRelative(rootRelative]) ||
+    if (rootRelative && (![rootRelative isKindOfClass:NSString.class] || !TKSafeRelative(rootRelative) ||
         [rootRelative containsString:@"/"])) {
         TKRecordError(error,@"The external installation record is invalid."); return nil;
     }
