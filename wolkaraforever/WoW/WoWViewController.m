@@ -608,7 +608,12 @@ static NSNotificationName const TKForeverLayoutDidChange = @"AKGamepadLayoutDidC
             }
             TKWoWUpdater *updater=[[TKWoWUpdater alloc] initWithClient:client];
             updater.fullVerification=repair;
-            BOOL updated=root && [updater updatePlan:plan root:root progress:progress error:&error];
+            // A pending fresh install may only activate into a still-unused
+            // folder. If another app/user created it after selection, stop.
+            if (external && root && ![TKExternalGameRecord hasExecutable] &&
+                [NSFileManager.defaultManager fileExistsAtPath:root])
+                error=TKWoWError(@"An external World of Warcraft folder now exists. It will not be replaced.");
+            BOOL updated=root && !error && [updater updatePlan:plan root:root progress:progress error:&error];
             if (updated && external) {
                 // Only a plan entry whose bytes match may become the launchable
                 // executable; attach it to the card record before registering.
@@ -639,7 +644,7 @@ static NSNotificationName const TKForeverLayoutDidChange = @"AKGamepadLayoutDidC
                 } else {
                     [self->_library discover];installation=TKWoWInspectInstallation(self->_library,product,plan);
                 }
-                error=nil;
+                if (!external) error=nil;
                 // Editions without a bundled compatibility profile still need a
                 // library entry after their first download. Register only the
                 // original executable already verified by the install manifest.
@@ -650,7 +655,7 @@ static NSNotificationName const TKForeverLayoutDidChange = @"AKGamepadLayoutDidC
                     if(executables.count==1 && [self->_library importExecutable:executables[0] copy:NO error:&error])
                         installation=TKWoWInspectInstallation(self->_library,product,plan);
                 }
-                if(installation.state==TKWoWInstallationReady) {
+                if(installation.state==TKWoWInstallationReady && installation.app && !error) {
                     [NSUserDefaults.standardUserDefaults removeObjectForKey:installKey];
                     [NSUserDefaults.standardUserDefaults removeObjectForKey:repairKey];
                 }
