@@ -73,10 +73,15 @@ still needs a real-device proof before any installation is directed at a drive.
    escapes, and retains the record when validation fails. `AppLibrary` gains an
    `external` source (via patch 0048) that resolves paths only through that
    record, and the launcher holds `TKExternalGameLibrary`'s lease for the whole
-   guest lifetime. Still missing before any install button: creation of the
-   record by an installer, installation/update routed to the selected volume,
-   and device evidence of install, disconnect and play. The record alone never
-   marks an installation ready or exposes Install to SD.
+   guest lifetime. A setting-free install path is also in place: a pending
+   record reserves `World of Warcraft` on the card, Forever inspection reports
+   disconnected media as unavailable (never Missing), the updater writes and
+   stages on the card under that lease, and a verified executable is attached
+   and registered only after activation. No UI creates the record yet, so
+   Install to SD remains hidden. Still missing: the installer action, UI
+   selection and confirmation, tool rows that assume internal storage
+   (add-ons, UI backup, locale writer), and device evidence for install,
+   disconnect, reconnect and play.
 4. **Installer and launch.** Route the complete Forever root, staging and
    capacity checks to the selected volume; hold scoped access for update,
    inspection and guest lifetime. Disable Play and updates when detached;

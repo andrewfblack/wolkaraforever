@@ -18,4 +18,6 @@ typedef NS_ENUM(NSInteger, TKWoWInstallationState) {
 // Read-only check of an imported installation against a verified current plan.
 // Run on a worker queue. Ready verifies metadata and executable, not every data block.
 TKWoWInstallation *TKWoWInspectInstallation(TKAppLibrary *library, NSDictionary *product, NSDictionary *plan);
+// External Forever install: disconnected media is NeedsRepair, never Missing.
+TKWoWInstallation *TKWoWInspectExternalInstallation(NSDictionary *product, NSDictionary *plan);
 NS_ASSUME_NONNULL_END

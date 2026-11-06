@@ -7,6 +7,7 @@
 #import "../App/WolkaraForeverTheme.h"
 #import "../App/WKLocalization.h"
 #import "Installation.h"
+#import "ExternalGameRecord.h"
 #import "DeviceProfile.h"
 #import "ExternalStorageProbe.h"
 #import "ForeverUI.h"
@@ -566,7 +567,18 @@ static NSNotificationName const TKForeverLayoutDidChange = @"AKGamepadLayoutDidC
         [self->_library discover];
         NSError *error=nil;
         NSDictionary *plan=[client planForProduct:product[@"id"] region:region locale:locale error:&error];
-        TKWoWInstallation *installation=plan?TKWoWInspectInstallation(self->_library,product,plan):nil;
+        // A registered external Forever install is authoritative: a missing
+        // card is reported as unavailable, never as a fresh internal install.
+        BOOL external=[product[@"id"] isEqual:@"wowf"] && [TKExternalGameRecord hasRecord];
+        TKWoWInstallation *installation=plan?(external?
+            TKWoWInspectExternalInstallation(product,plan):
+            TKWoWInspectInstallation(self->_library,product,plan)):nil;
+        if (external && installation.state==TKWoWInstallationReady) {
+            NSString *relative=[TKExternalGameRecord recordedExecutable];
+            TKApp *app=relative?[self->_library registerExternalExecutable:relative error:&error]:nil;
+            if (app) installation.app=app;
+            else if (!error) error=TKWoWError(@"The external installation could not be registered in the library.");
+        }
         BOOL updateAttempted=plan && (install || installation.state==TKWoWInstallationOutdated) && !client.cancelled;
         if(updateAttempted) {
             __block NSString *lastPhase=nil;
@@ -584,17 +596,52 @@ static NSNotificationName const TKForeverLayoutDidChange = @"AKGamepadLayoutDidC
                 });
             };
             progress(@"snapshot",0,0);
-            NSString *directory=installation.app?[self->_library workingDirectoryForApp:installation.app error:&error]:nil;
-            NSString *root=directory?directory.stringByDeletingLastPathComponent:
-                [NSSearchPathForDirectoriesInDomains(NSDocumentDirectory,NSUserDomainMask,YES).firstObject stringByAppendingPathComponent:@"World of Warcraft"];
+            // External installs hold the card's scope for the whole update. If
+            // it cannot be opened, no internal path is tried instead.
+            NSURL *externalFolder=external?[TKExternalGameRecord beginInstallAccess:&error]:nil;
+            NSString *root=nil;
+            if (external) root=externalFolder?[TKExternalGameRecord gameRootInFolder:externalFolder.path error:&error]:nil;
+            else {
+                NSString *directory=installation.app?[self->_library workingDirectoryForApp:installation.app error:&error]:nil;
+                root=directory?directory.stringByDeletingLastPathComponent:
+                    [NSSearchPathForDirectoriesInDomains(NSDocumentDirectory,NSUserDomainMask,YES).firstObject stringByAppendingPathComponent:@"World of Warcraft"];
+            }
             TKWoWUpdater *updater=[[TKWoWUpdater alloc] initWithClient:client];
             updater.fullVerification=repair;
-            if([updater updatePlan:plan root:root progress:progress error:&error]) {
-                [self->_library discover];installation=TKWoWInspectInstallation(self->_library,product,plan);error=nil;
+            BOOL updated=root && [updater updatePlan:plan root:root progress:progress error:&error];
+            if (updated && external) {
+                // Only a plan entry whose bytes match may become the launchable
+                // executable; attach it to the card record before registering.
+                NSString *relative=nil;
+                for(NSDictionary *file in plan[@"files"]) {
+                    if(![file[@"path"] hasSuffix:@".app/Contents/MacOS/World of Warcraft"]) continue;
+                    NSString *candidate=[root stringByAppendingPathComponent:file[@"path"]];
+                    NSData *bytes=[NSData dataWithContentsOfFile:candidate options:NSDataReadingMappedIfSafe error:NULL];
+                    if(bytes.length==[file[@"size"] unsignedLongLongValue] &&
+                       [TKWoWMD5(bytes) isEqual:file[@"contentKey"]]) { relative=file[@"path"]; break; }
+                }
+                if (!relative) error=TKWoWError(@"The downloaded external executable could not be verified.");
+                else if (![TKExternalGameRecord attachExecutable:relative inFolder:externalFolder error:&error]) { /* error set */ }
+                else {
+                    TKApp *app=[self->_library registerExternalExecutable:relative error:&error];
+                    if (!app && !error) error=TKWoWError(@"The external installation could not be registered in the library.");
+                }
+            }
+            if (externalFolder) [TKExternalGameRecord endAccess:externalFolder];
+            if(updated) {
+                if (external) {
+                    installation=TKWoWInspectExternalInstallation(product,plan);
+                    NSString *relative=[TKExternalGameRecord recordedExecutable];
+                    TKApp *app=relative?[self->_library registerExternalExecutable:relative error:NULL]:nil;
+                    if (app) installation.app=app;
+                } else {
+                    [self->_library discover];installation=TKWoWInspectInstallation(self->_library,product,plan);
+                }
+                error=nil;
                 // Editions without a bundled compatibility profile still need a
                 // library entry after their first download. Register only the
                 // original executable already verified by the install manifest.
-                if(installation.state==TKWoWInstallationMissing) {
+                if(!external && installation.state==TKWoWInstallationMissing) {
                     NSMutableArray *executables=[NSMutableArray new];
                     for(NSDictionary *file in plan[@"files"])if([file[@"path"] hasSuffix:@".app/Contents/MacOS/World of Warcraft"])
                         [executables addObject:[[root stringByAppendingPathComponent:product[@"folder"]] stringByAppendingPathComponent:file[@"path"]]];
