@@ -78,9 +78,11 @@ still needs a real-device proof before any installation is directed at a drive.
    disconnected media as unavailable (never Missing), the updater writes and
    stages on the card under that lease, and a verified executable is attached
    and registered only after activation. No UI creates the record yet, so
-   Install to SD remains hidden. Still missing: the installer action, UI
-   selection and confirmation, tool rows that assume internal storage
-   (add-ons, UI backup, locale writer), and device evidence for install,
+   Install to SD remains hidden. The rows that assume internal storage
+   (add-ons, UI backup/restore, graphics reset, locale writer) are disabled
+   for external installs instead of operating on an unleased path. Still
+   missing: an opt-in installer action with selection and confirmation,
+   scoped leases for those file-operation rows, and device evidence for install,
    disconnect, reconnect and play.
 4. **Installer and launch.** Route the complete Forever root, staging and
    capacity checks to the selected volume; hold scoped access for update,

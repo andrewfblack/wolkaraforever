@@ -670,6 +670,7 @@ static NSNotificationName const TKForeverLayoutDidChange = @"AKGamepadLayoutDidC
         // that a previous launch interrupted. This is the one place that runs
         // early enough to be ahead of the page, and it runs only for Forever.
         if(installation.state==TKWoWInstallationReady && installation.app &&
+           installation.app.source!=TKAppSourceExternal &&
            [self->_product[@"id"] isEqual:TKForeverUIEdition]) {
             NSString *directory=[self->_library workingDirectoryForApp:installation.app error:NULL];
             if(directory && ![TKForeverUI recoverInterruptedRestoreInWorkingDirectory:directory error:NULL])
@@ -829,7 +830,10 @@ static NSNotificationName const TKForeverLayoutDidChange = @"AKGamepadLayoutDidC
     _languageButton.contentHorizontalAlignment=UIControlContentHorizontalAlignmentLeading;
     [self configureButton:_addonsButton title:_installation.app?WKLocalized(@"home.addons.install"):WKLocalized(@"home.addons.install.needsgame") filled:NO];
     _addonsButton.contentHorizontalAlignment=UIControlContentHorizontalAlignmentLeading;
-    _addonsButton.enabled=_installation.app && !_busy && !_starting && !_running && !_sessionUsed;
+    // Add-on and UI file operations currently assume an internal Documents
+    // folder. Do not let them use an external path after its scope was released.
+    _addonsButton.enabled=_installation.app && _installation.app.source!=TKAppSourceExternal &&
+        !_busy && !_starting && !_running && !_sessionUsed;
     [self configureButton:_macEverButton title:WKLocalized(@"home.addons.macever") filled:NO];
     _macEverButton.contentHorizontalAlignment=UIControlContentHorizontalAlignmentLeading;
     // Navigation only: the page is opened for the user to download the ZIP.
@@ -897,7 +901,7 @@ static NSNotificationName const TKForeverLayoutDidChange = @"AKGamepadLayoutDidC
     _compatibilityLabel.hidden=!_compatibilityLabel.text.length;
     _editionButton.enabled=!_busy && !_starting && !_running && !_sessionUsed;
     _preferencesButton.enabled=_editionButton.enabled;
-    _languageButton.enabled=_editionButton.enabled;
+    _languageButton.enabled=_editionButton.enabled && _installation.app.source!=TKAppSourceExternal;
     self.navigationItem.rightBarButtonItem.enabled=!_updating && !_starting && !_running;
     _primaryButton.hidden=_starting || _running;
     _updatesLabel.hidden=_starting || _running;
@@ -1064,6 +1068,7 @@ static NSNotificationName const TKForeverLayoutDidChange = @"AKGamepadLayoutDidC
 // picker and the offer that follows the first German selection - come through here, so the
 // validated locale writer and the update gate are the same in both.
 - (void)setGameLocale:(NSString *)value {
+    if (_installation.app.source==TKAppSourceExternal) return;
     _locale=value;
     NSString *directory=[self foreverWorkingDirectory];
     if (directory) {
@@ -1094,7 +1099,8 @@ static NSNotificationName const TKForeverLayoutDidChange = @"AKGamepadLayoutDidC
 - (void)settings {
     UIAlertController *sheet=[UIAlertController alertControllerWithTitle:WKLocalized(@"home.settings.title")
         message:WKLocalized(@"home.settings.message") preferredStyle:UIAlertControllerStyleActionSheet];
-    if(!_busy && !_starting && !_sessionUsed && _installation.app) {
+    if(!_busy && !_starting && !_sessionUsed && _installation.app &&
+       _installation.app.source!=TKAppSourceExternal) {
         [sheet addAction:[UIAlertAction actionWithTitle:WKLocalized(@"home.settings.manageAddons") style:UIAlertActionStyleDefault handler:^(UIAlertAction *a) {
             (void)a; [self manageAddons];
         }]];
@@ -1279,6 +1285,7 @@ static NSNotificationName const TKForeverLayoutDidChange = @"AKGamepadLayoutDidC
 - (nullable NSString *)foreverWorkingDirectory {
     if (![_product[@"id"] isEqualToString:TKForeverUIEdition]) return nil;
     if (_installation.state!=TKWoWInstallationReady || !_installation.app) return nil;
+    if (_installation.app.source==TKAppSourceExternal) return nil;
     return [_library workingDirectoryForApp:_installation.app error:NULL];
 }
 - (BOOL)foreverActionAllowed {
@@ -1727,6 +1734,10 @@ static NSString *TKRenderQualityTitle(TKDeviceProfile *profile, TKRenderQuality 
     WKPresentWhenFree(self, ^{ [self presentViewController:alert animated:YES completion:nil]; });
 }
 - (nullable NSString *)addOnsDirectoryWithError:(NSError **)error {
+    if (_installation.app.source==TKAppSourceExternal) {
+        if (error) *error=TKWoWError(@"External add-on access is not yet available. Game files were not changed.");
+        return nil;
+    }
     NSString *directory=[_library workingDirectoryForApp:_installation.app error:error];
     return directory?[directory stringByAppendingPathComponent:@"Interface/AddOns"]:nil;
 }
