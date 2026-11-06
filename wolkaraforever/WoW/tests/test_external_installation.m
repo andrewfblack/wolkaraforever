@@ -31,6 +31,8 @@ int main(void) { @autoreleasepool {
     NSString *row=[NSString stringWithFormat:@"Product|Active|Build Key|CDN Key|Version|Tags\nwowf|1|%@|%@|%@|OSX arm64 EU enUS text?\n",build,cdn,version];
     assert([row writeToFile:[root stringByAppendingPathComponent:@".build.info"] atomically:YES encoding:NSUTF8StringEncoding error:NULL]);
     state=TKWoWInspectExternalInstallation(product,plan);
+    fprintf(stderr,"external state=%ld error=%s executable=%s\n",(long)state.state,
+        state.error.localizedDescription.UTF8String?:"none",[TKExternalGameRecord recordedExecutable].UTF8String?:"none");
     assert(state.state==TKWoWInstallationReady && [TKExternalGameRecord hasExecutable]);
     assert(!state.app); // the library registers the verified executable separately
 
