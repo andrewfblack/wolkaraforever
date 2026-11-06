@@ -118,7 +118,7 @@ TKWoWInstallation *TKWoWInspectExternalInstallation(NSDictionary *product, NSDic
             for (NSDictionary *file in plan[@"files"]) {
                 NSString *path=file[@"path"];
                 if (![path hasSuffix:@".app/Contents/MacOS/World of Warcraft"]) continue;
-                NSString *candidate=[root stringByAppendingPathComponent:path];
+                NSString *candidate=[[root stringByAppendingPathComponent:@"_forever_"] stringByAppendingPathComponent:path];
                 NSDictionary *executableAttributes=[NSFileManager.defaultManager attributesOfItemAtPath:candidate error:NULL];
                 if ([executableAttributes[NSFileSize] unsignedLongLongValue]!=[file[@"size"] unsignedLongLongValue]) continue;
                 NSData *bytes=[NSData dataWithContentsOfFile:candidate options:NSDataReadingMappedIfSafe error:NULL];

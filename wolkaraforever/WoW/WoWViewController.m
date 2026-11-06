@@ -615,7 +615,7 @@ static NSNotificationName const TKForeverLayoutDidChange = @"AKGamepadLayoutDidC
                 NSString *relative=nil;
                 for(NSDictionary *file in plan[@"files"]) {
                     if(![file[@"path"] hasSuffix:@".app/Contents/MacOS/World of Warcraft"]) continue;
-                    NSString *candidate=[root stringByAppendingPathComponent:file[@"path"]];
+                    NSString *candidate=[[root stringByAppendingPathComponent:@"_forever_"] stringByAppendingPathComponent:file[@"path"]];
                     NSData *bytes=[NSData dataWithContentsOfFile:candidate options:NSDataReadingMappedIfSafe error:NULL];
                     if(bytes.length==[file[@"size"] unsignedLongLongValue] &&
                        [TKWoWMD5(bytes) isEqual:file[@"contentKey"]]) {
