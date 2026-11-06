@@ -19,6 +19,10 @@ int main(void) { @autoreleasepool {
     error=nil;
     assert(![TKExternalStorageProbe inspectSelectedFolder:&error]);
     assert(error && [TKExternalStorageProbe hasSelection]);
+    NSData *damaged=[defaults dataForKey:key];
+    error=nil;
+    assert(![TKExternalStorageProbe selectFolder:[NSURL URLWithString:@"https://example.invalid/replacement"] error:&error]);
+    assert(error && [[defaults dataForKey:key] isEqual:damaged]);
     if (previous) [defaults setObject:previous forKey:key];
     else [defaults removeObjectForKey:key];
     NSLog(@"external storage probe: missing and invalid selections fail closed");
