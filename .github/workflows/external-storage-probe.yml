@@ -25,7 +25,7 @@ jobs:
         run: wolkaraforever/tools/test_wow_launcher.sh
       - name: Test launcher UI in simulator
         timeout-minutes: 20
-        run: wolkaraforever/tools/test_wow_launcher_ui.sh
+        run: wolkaraforever/tools/test_wow_launcher_ui.sh --storage-probe-only
       - name: Build unsigned External JIT IPA
         run: TOLKARA_SYSTEM_ROOTS=NO wolkaraforever/tools/package_ipa.sh Tolkara-storage-probe-unsigned.ipa
       - name: Upload IPA

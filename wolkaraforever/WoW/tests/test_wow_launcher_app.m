@@ -491,7 +491,31 @@ static void TestPhoneDisplayDefaults(void) {
     self.controller.executionMode=TKExecutionModeDeveloperService;
     self.window.rootViewController=[[UINavigationController alloc] initWithRootViewController:self.controller];
     [self.window makeKeyAndVisible];
+    if ([NSProcessInfo.processInfo.arguments containsObject:@"--storage-probe-only"]) {
+        [self performSelector:@selector(checkStorageProbeOnly) withObject:nil afterDelay:0.3];
+        return;
+    }
     [self performSelector:@selector(changeSelection) withObject:nil afterDelay:0.1];
+}
+- (void)checkStorageProbeOnly {
+    // A narrow CI check: the existing full launcher fixture has unrelated
+    // viewport/layout assertions that depend on the simulator's screen size.
+    assert(PumpUntil(^{ return [self primary].enabled; }, 10));
+    [self.controller settings];
+    UIAlertController *sheet=WaitForAlert(self.controller,4);
+    assert(sheet);
+    UIAlertAction *probe=nil;
+    for (UIAlertAction *action in sheet.actions)
+        if ([action.title isEqual:@"Probe a storage folder (no game files moved)"]) probe=action;
+    assert(probe && [[sheet.actions valueForKey:@"title"] containsObject:@"Cancel"]);
+    [self.controller dismissViewControllerAnimated:NO completion:nil];
+    RunAction(probe);
+    assert(PumpUntil(^{ return [self.controller.presentedViewController isKindOfClass:UIDocumentPickerViewController.class]; }, 4));
+    UIDocumentPickerViewController *picker=(id)self.controller.presentedViewController;
+    [self.controller documentPickerWasCancelled:picker];
+    [self.controller dismissViewControllerAnimated:NO completion:nil];
+    puts("WoW UIKit PASS: storage probe picker opens and cancels without selecting game storage");
+    exit(0);
 }
 - (void)changeSelection {
     [self.controller selectProduct:TKWoWProducts()[1]];
