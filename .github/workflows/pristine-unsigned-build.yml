@@ -1,0 +1,32 @@
+name: Pristine WolkaraForever unsigned build
+
+on:
+  push:
+    branches: [build/pristine-wolkaraforever]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  ipa:
+    runs-on: macos-26
+    steps:
+      - uses: actions/checkout@v5
+      - name: Install XcodeGen
+        run: brew install xcodegen
+      - name: Build unsigned IPA from untouched app source
+        run: TOLKARA_SYSTEM_ROOTS=NO wolkaraforever/tools/package_ipa.sh WolkaraForever-upstream-unsigned.ipa
+      - name: Upload IPA
+        uses: actions/upload-artifact@v4
+        with:
+          name: WolkaraForever-upstream-unsigned
+          path: build/platform/WolkaraForever-upstream-unsigned.ipa
+          if-no-files-found: error
+      - name: Upload build log if the build fails
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pristine-build-logs
+          path: build/platform/logs/
+          if-no-files-found: ignore
