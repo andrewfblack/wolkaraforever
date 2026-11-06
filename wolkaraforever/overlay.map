@@ -80,6 +80,7 @@ wolkaraforever/WoW/tests/test_addon_archive.swift tests/test_addon_archive.swift
 wolkaraforever/WoW/tests/test_addon_import.m tests/test_addon_import.m add
 wolkaraforever/WoW/tests/test_curseforge.m tests/test_curseforge.m add
 wolkaraforever/WoW/tests/test_device_profile.m tests/test_device_profile.m add
+wolkaraforever/WoW/tests/test_external_app_library.m tests/test_external_app_library.m add
 wolkaraforever/WoW/tests/test_external_game_library.m tests/test_external_game_library.m add
 wolkaraforever/WoW/tests/test_external_game_record.m tests/test_external_game_record.m add
 wolkaraforever/WoW/tests/test_external_storage_probe.m tests/test_external_storage_probe.m add

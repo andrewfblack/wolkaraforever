@@ -1,0 +1,140 @@
+diff --git a/launcher/App/AppLibrary.h b/launcher/App/AppLibrary.h
+index 733ea97..5f9e3cf 100644
+--- a/launcher/App/AppLibrary.h
++++ b/launcher/App/AppLibrary.h
+@@ -12,6 +12,8 @@ typedef NS_ENUM(NSInteger, TKAppSource) {
+     TKAppSourceDocuments,
+     // Tolkara's own verified copy in Documents/GuestModules (executable only).
+     TKAppSourceCopy,
++    // WolkaraForever's separately bookmarked game folder on removable media.
++    TKAppSourceExternal,
+ };
+
+ @interface TKApp : NSObject
+@@ -69,6 +71,9 @@ typedef NS_ENUM(NSInteger, TKAppSource) {
+ // `copy` forces a copy (developer staging). Re-importing returns the existing
+ // entry. Slow: hashes and parses the file. Call off the main thread.
+ - (nullable TKApp *)importExecutable:(NSString *)path copy:(BOOL)copy error:(NSError **)error;
++// Registers a previously validated, bookmarked Forever executable. Nothing is
++// copied, and disconnected media never causes a Documents re-import.
++- (nullable TKApp *)registerExternalExecutable:(NSString *)relative error:(NSError **)error;
+ // Adds apps a profile describes whose files are present, and a module imported
+ // by an older launcher. Removed apps are not re-added. Returns new entries. Slow.
+ - (NSArray<TKApp *> *)discover;
+diff --git a/launcher/App/AppLibrary.m b/launcher/App/AppLibrary.m
+index 3bd6e08..00e778b 100644
+--- a/launcher/App/AppLibrary.m
++++ b/launcher/App/AppLibrary.m
+@@ -1,4 +1,5 @@
+ #import "AppLibrary.h"
++#import "../WoW/ExternalGameRecord.h"
+ #import "GuestImage.h"
+ #import "GuestModule.h"
+ #include <ctype.h>
+@@ -97,7 +98,10 @@ static NSString *clean_name(id name) {
+     NSString *source=record[@"source"];
+     if (![record[@"id"] isKindOfClass:NSString.class] || ![[NSUUID alloc] initWithUUIDString:record[@"id"]]) return nil;
+     if (!clean_name(record[@"name"]) || !valid_relative(record[@"executable"],NO) || !valid_relative(record[@"workingDirectory"],YES)) return nil;
+-    if (![source isEqual:@"documents"] && !([source isEqual:@"copy"] && valid_hash(record[@"sha256"]))) return nil;
++    BOOL external=[source isEqual:@"external"] && [record[@"workingDirectory"] isEqual:@"_forever_"] &&
++        [record[@"executable"] hasPrefix:@"_forever_/"];
++    if (![source isEqual:@"documents"] && !([source isEqual:@"copy"] && valid_hash(record[@"sha256"])) &&
++        !external) return nil;
+     if (record[@"sha256"] && !valid_hash(record[@"sha256"])) return nil;
+     if (record[@"profile"] && ![record[@"profile"] isKindOfClass:NSString.class]) return nil;
+     if (![record[@"added"] isKindOfClass:NSNumber.class]) return nil;
+@@ -106,7 +110,11 @@ static NSString *clean_name(id name) {
+ }
+ - (NSString *)identifier { return self.record[@"id"]; }
+ - (NSString *)name { return self.record[@"name"]; }
+-- (TKAppSource)source { return [self.record[@"source"] isEqual:@"copy"] ? TKAppSourceCopy : TKAppSourceDocuments; }
++- (TKAppSource)source {
++    if ([self.record[@"source"] isEqual:@"copy"]) return TKAppSourceCopy;
++    if ([self.record[@"source"] isEqual:@"external"]) return TKAppSourceExternal;
++    return TKAppSourceDocuments;
++}
+ - (NSString *)executable { return self.record[@"executable"]; }
+ - (NSString *)workingDirectory { return self.record[@"workingDirectory"]; }
+ - (NSString *)sha256 { return self.record[@"sha256"]?:@""; }
+@@ -230,7 +238,7 @@ static NSString *clean_name(id name) {
+     NSArray<TKApp *> *apps=self.apps;
+     if (apps.firstObject.lastLaunched) return apps.firstObject;
+     // An app with its resources beats a bare executable copy.
+-    for (TKApp *app in apps) if (app.source==TKAppSourceDocuments) return app;
++    for (TKApp *app in apps) if (app.source!=TKAppSourceCopy) return app;
+     return apps.firstObject;
+ }
+
+@@ -335,6 +343,25 @@ static NSString *bundle_executable(NSString *path, NSError **error) {
+         @"executable":[directory stringByAppendingPathComponent:@"OriginalExecutable.bin"],@"workingDirectory":directory} error:error];
+ }
+
++// The bookmark, its relative path and the files themselves are validated by
++// the layer; this call only records the validated result. A disconnected volume
++// fails here and leaves the existing record untouched.
++- (TKApp *)registerExternalExecutable:(NSString *)relative error:(NSError **)error {
++    if (![relative isEqual:[TKExternalGameRecord recordedExecutable]]) {
++        library_error(error,@"The executable does not match the registered external folder."); return nil;
++    }
++    NSURL *folder=[TKExternalGameRecord beginAccess:error];
++    if (!folder) return nil;
++    @try {
++        NSDictionary *paths=[TKExternalGameRecord validatedPathsWithFolder:folder error:error];
++        if (!paths || ![paths[@"executable"] hasSuffix:relative]) return nil;
++        NSString *hash=guest_module_hash(paths[@"executable"],NULL,error);
++        if (!hash) return nil;
++        return [self addRecord:@{@"source":@"external",@"name":@"Forever (SD card)",
++            @"executable":relative,@"workingDirectory":@"_forever_",@"sha256":hash} error:error];
++    } @finally { [TKExternalGameRecord endAccess:folder]; }
++}
++
+ - (NSArray<TKApp *> *)discover {
+     NSMutableArray *found=[NSMutableArray new];
+     NSMutableSet *known=[NSMutableSet new], *dismissed;
+@@ -478,6 +505,12 @@ static BOOL path_inside(id path, NSString *folder) {
+
+ - (NSString *)executablePathForApp:(TKApp *)app error:(NSError **)error {
+     if (app.source==TKAppSourceCopy) return guest_module_path([self modulesRoot],app.sha256,error);
++    if (app.source==TKAppSourceExternal) {
++        NSURL *folder=[TKExternalGameRecord beginAccess:error];
++        if (!folder) return nil;
++        @try { return [TKExternalGameRecord validatedPathsWithFolder:folder error:error][@"executable"]; }
++        @finally { [TKExternalGameRecord endAccess:folder]; }
++    }
+     NSString *path=join(_documents,app.executable);
+     struct stat st;
+     if (lstat(path.fileSystemRepresentation,&st)) {
+@@ -525,6 +558,12 @@ static BOOL path_inside(id path, NSString *folder) {
+     return report;
+ }
+ - (NSString *)workingDirectoryForApp:(TKApp *)app error:(NSError **)error {
++    if (app.source==TKAppSourceExternal) {
++        NSURL *folder=[TKExternalGameRecord beginAccess:error];
++        if (!folder) return nil;
++        @try { return [TKExternalGameRecord validatedPathsWithFolder:folder error:error][@"workingDirectory"]; }
++        @finally { [TKExternalGameRecord endAccess:folder]; }
++    }
+     NSString *path=join(_documents,app.workingDirectory);
+     NSString *relative=app.workingDirectory.length ? [self relativeInDocuments:path] : @"";
+     BOOL directory=NO;
+diff --git a/launcher/App/LibraryViewController.m b/launcher/App/LibraryViewController.m
+index 589a9db..3e790de 100644
+--- a/launcher/App/LibraryViewController.m
++++ b/launcher/App/LibraryViewController.m
+@@ -118,6 +118,7 @@ static BOOL TKTouchControlsShown(void) {
+ }
+ - (NSString *)locationOfApp:(TKApp *)app {
+     if (app.source==TKAppSourceCopy) return @"Tolkara's copy of the executable";
++    if (app.source==TKAppSourceExternal) return @"The selected SD card folder";
+     return app.workingDirectory.length ? [@"Documents/" stringByAppendingString:app.workingDirectory] : @"Documents";
+ }
+ - (NSString *)lastStartedOfApp:(TKApp *)app {
+@@ -215,6 +216,8 @@ static BOOL TKTouchControlsShown(void) {
+     NSMutableString *message=[NSMutableString new];
+     if (app.source==TKAppSourceDocuments) {
+         [message appendFormat:@"Executable: Documents/%@\n\nWorking folder: %@",app.executable,[self locationOfApp:app]];
++    } else if (app.source==TKAppSourceExternal) {
++        [message appendFormat:@"Runs from the registered folder on removable storage.\n\nLocation: %@\n\nIf the card is disconnected the game is unavailable; nothing is downloaded again and no files are removed.",[self locationOfApp:app]];
+     } else {
+         [message appendString:@"Tolkara keeps its own verified copy of this executable. Only the executable was imported."];
+     }

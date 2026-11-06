@@ -54,3 +54,9 @@ xcrun clang -fobjc-arc -Wall -Wextra -Werror -O1 -g \
     -framework Foundation launcher/WoW/ExternalGameRecord.m launcher/WoW/ExternalGameLibrary.m \
     tests/test_external_game_library.m -o build/wow-launcher/test_external_game_library
 build/wow-launcher/test_external_game_library
+xcrun clang -fobjc-arc -Wno-deprecated-declarations -Wall -Wextra -Werror -O1 -g \
+    -Iruntime -Ilauncher/App -framework Foundation \
+    launcher/App/AppLibrary.m runtime/GuestModule.m runtime/GuestMemory.c runtime/GuestImage.c \
+    launcher/WoW/ExternalGameRecord.m tests/test_external_app_library.m \
+    -o build/wow-launcher/test_external_app_library
+build/wow-launcher/test_external_app_library

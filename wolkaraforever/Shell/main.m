@@ -9,6 +9,7 @@
 // iPadOS lists a privacy row in Settings only after the app has asked for it once.
 #import <Speech/Speech.h>
 #import "AppLibrary.h"
+#import "../WoW/ExternalGameLibrary.h"
 #import "Diagnostics.h"
 #import "DiagnosticsViewController.h"
 #import "ExecutionMode.h"
@@ -65,6 +66,8 @@ static NSString *const AKOwnedKeysUserInfoKey = @"usages";
 @property(nonatomic, strong) TKWoWViewController *wowController;
 @property(nonatomic, strong) TKAppLibrary *library;
 @property(nonatomic, strong, nullable) TKApp *launchingApp;
+// Held from before a guest starts until it ends; external media must stay leased.
+@property(nonatomic, strong) TKExternalGameLibrary *externalGame;
 @property(nonatomic, strong) TKSteamCloudCoordinator *steamCloud;
 @property(nonatomic) BOOL cloudPrepared;
 @property(nonatomic) BOOL cloudPreparing;
@@ -1229,7 +1232,18 @@ static NSString *AKAudioStateDescription(void) {
     fflush(log);
     [self showClosingPage:WKLocalized(@"shell.didNotStart")];
 }
+- (void)endExternalGameAccess { [self.externalGame endLaunch]; }
 - (void)runNativeGame:(BOOL)fullStartup app:(TKApp *)app container:(NSString *)container {
+    // The card's security scope is held for the whole guest lifetime. Asking a
+    // second time (the Steam Cloud resume path) keeps the existing lease.
+    if (app.source==TKAppSourceExternal) {
+        if (!self.externalGame) self.externalGame=[TKExternalGameLibrary new];
+        NSError *storageError=nil;
+        if (![self.externalGame beginLaunch:&storageError]) {
+            self.status.text=storageError.localizedDescription;
+            [self showStartStopped]; return;
+        }
+    }
     if (!self.cloudPrepared && [TKSteamCloudCoordinator configuredProfile:app.profile documents:TKDocumentsPath(@"")]) {
         if(self.cloudPreparing)return;self.cloudPreparing=YES;
         self.cloudFullStartup=fullStartup;self.cloudApp=app;self.cloudContainer=container;
@@ -1251,7 +1265,7 @@ static NSString *AKAudioStateDescription(void) {
     UIApplication.sharedApplication.idleTimerDisabled = YES;
     NSString *logPath = TKDocumentsPath(@"native-guest.log");
     FILE *log = fopen(logPath.fileSystemRepresentation, "w");
-    if (!log) { self.status.text = WKLocalized(@"shell.logUnavailable"); [self showStartStopped]; return; }
+    if (!log) { [self endExternalGameAccess]; self.status.text = WKLocalized(@"shell.logUnavailable"); [self showStartStopped]; return; }
     setvbuf(log, NULL, _IOLBF, 0);
     dup2(fileno(log), STDERR_FILENO);
     dup2(fileno(log), STDOUT_FILENO);
@@ -1268,6 +1282,7 @@ static NSString *AKAudioStateDescription(void) {
     // The application finds its resources relative to its working directory.
     NSString *directory=path ? [self.library workingDirectoryForApp:app error:&error] : nil;
     if (!directory) {
+        [self endExternalGameAccess];
         self.status.text=app ? error.localizedDescription : WKLocalized(@"shell.importFirst");
         fprintf(log,"[host] %s\n",self.status.text.UTF8String);
         [self showStartStopped];
@@ -1338,6 +1353,7 @@ static NSString *AKAudioStateDescription(void) {
             // One startup attempt per process, as for Developer service.
             NSString *retry=WKLocalized(@"shell.retry.reopen");
             if(self.sessionUsed) retry=WKLocalized(@"shell.retry.reopenOrMode");
+            [self endExternalGameAccess];
             self.status.text=WKLocalizedFormat(@"shell.localSigning.failed",reason[0]?reason:"see runtime log",retry);
             [self showStartStopped];
             [self endSessionThatCannotStartAgain:self.status.text log:log];
@@ -1346,6 +1362,9 @@ static NSString *AKAudioStateDescription(void) {
         fprintf(log,"[host] signed-image container=%s\n",shown.UTF8String); fflush(log);
     }
     BOOL ok = ng_initialize(path.fileSystemRepresentation, NSBundle.mainBundle.privateFrameworksPath.fileSystemRepresentation, map.fileSystemRepresentation, log, fullStartup);
+    // The guest has ended; release the card. Media removed mid-session is a
+    // guest failure, never a reason to fall back to internal storage.
+    [self endExternalGameAccess];
     // The outcome as the host saw it (tools/run.sh requires "returned").
     fprintf(log,"[host] native %s %s\n",fullStartup?"startup":"first initializer",ok?"returned":"stopped"); fflush(log);
     self.status.text = ok ? (fullStartup ? [app.name stringByAppendingString:WKLocalized(@"shell.closed")] : WKLocalized(@"shell.firstInitializer")) : WKLocalized(@"shell.nativeStopped");

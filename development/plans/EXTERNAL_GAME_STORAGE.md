@@ -70,9 +70,13 @@ still needs a real-device proof before any installation is directed at a drive.
    escape the selected root. Cover discovery, import, and executable checks.
    Internal groundwork: `ExternalGameRecord` now validates an app-private
    bookmark and relative executable path, refuses missing media and symlink
-   escapes, and retains the record when validation fails. The library source
-   type, discovery, and launch integration are not yet connected, so this
-   record alone never marks an installation ready or exposes Play.
+   escapes, and retains the record when validation fails. `AppLibrary` gains an
+   `external` source (via patch 0048) that resolves paths only through that
+   record, and the launcher holds `TKExternalGameLibrary`'s lease for the whole
+   guest lifetime. Still missing before any install button: creation of the
+   record by an installer, installation/update routed to the selected volume,
+   and device evidence of install, disconnect and play. The record alone never
+   marks an installation ready or exposes Install to SD.
 4. **Installer and launch.** Route the complete Forever root, staging and
    capacity checks to the selected volume; hold scoped access for update,
    inspection and guest lifetime. Disable Play and updates when detached;
