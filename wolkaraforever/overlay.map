@@ -83,6 +83,7 @@ wolkaraforever/WoW/tests/test_device_profile.m tests/test_device_profile.m add
 wolkaraforever/WoW/tests/test_external_app_library.m tests/test_external_app_library.m add
 wolkaraforever/WoW/tests/test_external_game_library.m tests/test_external_game_library.m add
 wolkaraforever/WoW/tests/test_external_game_record.m tests/test_external_game_record.m add
+wolkaraforever/WoW/tests/test_external_installation.m tests/test_external_installation.m add
 wolkaraforever/WoW/tests/test_external_storage_probe.m tests/test_external_storage_probe.m add
 wolkaraforever/WoW/tests/test_forever_config.m tests/test_forever_config.m add
 wolkaraforever/WoW/tests/test_forever_ui_archive.swift tests/test_forever_ui_archive.swift add

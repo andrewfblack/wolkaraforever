@@ -24,6 +24,11 @@ xcrun clang -fobjc-arc -Wall -Wextra -Werror -O1 -g \
     -o build/wow-launcher/test_wow_installation
 build/wow-launcher/test_wow_installation
 xcrun clang -fobjc-arc -Wall -Wextra -Werror -O1 -g \
+    -framework Foundation -lz launcher/WoW/Manifest.m launcher/WoW/Installation.m \
+    launcher/WoW/ExternalGameRecord.m tests/test_external_installation.m \
+    -o build/wow-launcher/test_external_installation
+build/wow-launcher/test_external_installation
+xcrun clang -fobjc-arc -Wall -Wextra -Werror -O1 -g \
     -fsanitize=address,undefined -fno-omit-frame-pointer -framework Foundation -lz \
     launcher/WoW/Manifest.m launcher/WoW/CASC.m launcher/WoW/Client.m launcher/WoW/UpdateLock.m launcher/WoW/Updater.m tests/test_wow_update.m \
     -o build/wow-launcher/test_wow_update
