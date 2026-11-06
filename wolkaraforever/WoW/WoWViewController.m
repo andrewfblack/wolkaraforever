@@ -618,7 +618,9 @@ static NSNotificationName const TKForeverLayoutDidChange = @"AKGamepadLayoutDidC
                     NSString *candidate=[root stringByAppendingPathComponent:file[@"path"]];
                     NSData *bytes=[NSData dataWithContentsOfFile:candidate options:NSDataReadingMappedIfSafe error:NULL];
                     if(bytes.length==[file[@"size"] unsignedLongLongValue] &&
-                       [TKWoWMD5(bytes) isEqual:file[@"contentKey"]]) { relative=file[@"path"]; break; }
+                       [TKWoWMD5(bytes) isEqual:file[@"contentKey"]]) {
+                        relative=[@"_forever_" stringByAppendingPathComponent:file[@"path"]]; break;
+                    }
                 }
                 if (!relative) error=TKWoWError(@"The downloaded external executable could not be verified.");
                 else if (![TKExternalGameRecord attachExecutable:relative inFolder:externalFolder error:&error]) { /* error set */ }

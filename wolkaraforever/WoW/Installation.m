@@ -122,7 +122,9 @@ TKWoWInstallation *TKWoWInspectExternalInstallation(NSDictionary *product, NSDic
                 NSDictionary *executableAttributes=[NSFileManager.defaultManager attributesOfItemAtPath:candidate error:NULL];
                 if ([executableAttributes[NSFileSize] unsignedLongLongValue]!=[file[@"size"] unsignedLongLongValue]) continue;
                 NSData *bytes=[NSData dataWithContentsOfFile:candidate options:NSDataReadingMappedIfSafe error:NULL];
-                if (bytes && [TKWoWMD5(bytes) isEqual:file[@"contentKey"]]) { relative=path; break; }
+                if (bytes && [TKWoWMD5(bytes) isEqual:file[@"contentKey"]]) {
+                    relative=[@"_forever_" stringByAppendingPathComponent:path]; break;
+                }
             }
             if (!relative) {
                 result.error=TKWoWError(@"The external executable is unavailable or does not match the published build.");
@@ -135,7 +137,7 @@ TKWoWInstallation *TKWoWInspectExternalInstallation(NSDictionary *product, NSDic
         NSDictionary *paths=[TKExternalGameRecord validatedPathsWithFolder:folder error:&error];
         if (!paths) { result.error=error; return result; }
         NSString *executable=paths[@"executable"];
-        for (NSDictionary *file in plan[@"files"]) if ([file[@"path"] isEqual:relative]) {
+        for (NSDictionary *file in plan[@"files"]) if ([[@"_forever_" stringByAppendingPathComponent:file[@"path"]] isEqual:relative]) {
             NSData *bytes=[NSData dataWithContentsOfFile:executable options:NSDataReadingMappedIfSafe error:&error];
             if (bytes.length==[file[@"size"] unsignedLongLongValue] && [TKWoWMD5(bytes) isEqual:file[@"contentKey"]]) {
                 result.state=TKWoWInstallationReady; return result;
