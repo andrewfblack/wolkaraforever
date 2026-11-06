@@ -24,6 +24,11 @@ static BOOL TKForeverExecutable(NSString *relative) {
 + (BOOL)hasRecord {
     return [[NSUserDefaults.standardUserDefaults objectForKey:TKExternalGameRecordKey] isKindOfClass:NSDictionary.class];
 }
++ (nullable NSString *)recordedExecutable {
+    NSDictionary *record=[NSUserDefaults.standardUserDefaults objectForKey:TKExternalGameRecordKey];
+    NSString *relative=[record isKindOfClass:NSDictionary.class] ? record[@"executable"] : nil;
+    return TKForeverExecutable(relative)?relative:nil;
+}
 
 + (BOOL)registerRoot:(NSURL *)root executable:(NSString *)relative error:(NSError **)error {
     if (!root.isFileURL || ![root startAccessingSecurityScopedResource]) {
