@@ -136,6 +136,13 @@
 "home.settings.diagnostics" = "Diagnostics and logs";
 "home.storage.choose" = "Probe a storage folder (no game files moved)";
 "home.storage.check" = "Check selected storage folder";
+"home.storage.test" = "Test SD-card filesystem (small disposable files)";
+"home.storage.test.title" = "Test selected storage";
+"home.storage.test.confirm" = "This creates and removes a small, uniquely named test folder inside your selected folder. It checks file cloning and atomic swapping. No WoW files are touched. Continue?";
+"home.storage.test.run" = "Run test";
+"home.storage.test.success" = "Filesystem test passed";
+"home.storage.test.failed" = "Filesystem test failed";
+"home.storage.test.result" = "The %1$@ filesystem passed the small-file clone and atomic-swap checks. This does not yet prove that WoW can install or play from this drive.";
 "home.storage.available" = "Folder is accessible";
 "home.storage.unavailable" = "Folder is unavailable";
 "home.storage.unknown" = "The folder could not be checked.";

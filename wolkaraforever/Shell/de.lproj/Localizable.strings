@@ -136,6 +136,13 @@
 "home.settings.diagnostics" = "Diagnose und Protokolle";
 "home.storage.choose" = "Speicherordner prüfen (keine Spieldateien verschoben)";
 "home.storage.check" = "Ausgewählten Speicherordner erneut prüfen";
+"home.storage.test" = "SD-Karten-Dateisystem prüfen (kleine Testdateien)";
+"home.storage.test.title" = "Ausgewählten Speicher prüfen";
+"home.storage.test.confirm" = "Hierfür wird im ausgewählten Ordner ein kleiner, eindeutig benannter Testordner erstellt und wieder entfernt. Dateiklonen und atomarer Austausch werden geprüft. WoW-Dateien werden nicht verändert. Fortfahren?";
+"home.storage.test.run" = "Test starten";
+"home.storage.test.success" = "Dateisystemtest bestanden";
+"home.storage.test.failed" = "Dateisystemtest fehlgeschlagen";
+"home.storage.test.result" = "Das %1$@-Dateisystem hat die Prüfungen für das Klonen und den atomaren Austausch kleiner Dateien bestanden. Dies beweist noch nicht, dass WoW von diesem Laufwerk installiert oder gespielt werden kann.";
 "home.storage.available" = "Ordner ist erreichbar";
 "home.storage.unavailable" = "Ordner ist nicht erreichbar";
 "home.storage.unknown" = "Der Ordner konnte nicht geprüft werden.";

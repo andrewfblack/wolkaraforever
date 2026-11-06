@@ -1,6 +1,6 @@
 # External game storage: implementation plan
 
-Status: read-only folder probe implemented; USB-C game storage is **not implemented**. Do not move an
+Status: folder probe and opt-in disposable-file test implemented; USB-C game storage is **not implemented**. Do not move an
 existing installation or replace its `Data` directory with a symlink.
 
 ## Goal and initial scope
@@ -56,12 +56,13 @@ still needs a real-device proof before any installation is directed at a drive.
    stale or unavailable. Still test selecting a folder, unplugging/replugging,
    app restart, and revoked permission on a real device. The probe writes no
    WoW files; it does not test filesystem write capability or update safety.
-2. **Transactional filesystem fixture.** On a *test-only* folder on the drive,
-   exercise clone, write, checkpoint, rename/swap and interrupted-update
-   recovery using the same primitives as the updater. Check filesystem
-   identity and available capacity before and after each operation. Only
-   allow a volume that passes; exFAT must not be claimed supported merely
-   because Files can display it. Never target user game data for this test.
+2. **Transactional filesystem fixture (small-file probe implemented, device
+   untested).** The opt-in Settings test uses a newly created disposable
+   folder, verifies cloning does not mutate the source, checks atomic swap,
+   and reports cleanup failure. Remaining: test interruption/recovery,
+   filesystem identity and available capacity before and after the operation,
+   and actual directory activation on the user's drive. A small-file pass is
+   not sufficient to allow a real installation. Never target user game data.
 3. **External installation records.** Add an explicit source type, validated
    relative paths, and app-local location reference. Preserve the existing
    Documents behavior for existing records. Prove that unavailable drives

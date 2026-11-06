@@ -24,6 +24,11 @@ folder, its filesystem type and available space. **Check selected storage folder
 the check after restarting the app or reconnecting the drive. No game files are moved or
 written by this probe; choosing a folder does **not** change where Install or Play looks
 for the game. An accessible folder is not proof that the drive can support updates or play.
+With the drive attached and the app idle, **Test SD-card filesystem** asks for confirmation,
+then creates and removes a small, uniquely named test folder *inside the selected folder*.
+It checks the clone and atomic-swap operations used by the updater. It does not touch game
+files; a successful test does not enable external installation. If cleanup reports an error,
+inspect that test folder in Files before removing it yourself.
 
 The first check of an imported installation still reads its game data. Later
 updates reuse checks for unchanged files, and long checks save their progress

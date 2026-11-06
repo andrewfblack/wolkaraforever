@@ -1059,6 +1059,10 @@ static NSNotificationName const TKForeverLayoutDidChange = @"AKGamepadLayoutDidC
             [sheet addAction:[UIAlertAction actionWithTitle:WKLocalized(@"home.storage.check") style:UIAlertActionStyleDefault handler:^(UIAlertAction *a) {
                 (void)a; [self checkStorageProbeFolder];
             }]];
+        if ([TKExternalStorageProbe hasSelection])
+            [sheet addAction:[UIAlertAction actionWithTitle:WKLocalized(@"home.storage.test") style:UIAlertActionStyleDefault handler:^(UIAlertAction *a) {
+                (void)a; [self confirmStorageFilesystemTest];
+            }]];
     }
     [sheet addAction:[UIAlertAction actionWithTitle:WKLocalized(@"home.settings.about") style:UIAlertActionStyleDefault handler:^(UIAlertAction *a) {
         (void)a; [self about];
@@ -1099,6 +1103,27 @@ static NSNotificationName const TKForeverLayoutDidChange = @"AKGamepadLayoutDidC
         NSDictionary *result=[TKExternalStorageProbe inspectSelectedFolder:&error];
         dispatch_async(dispatch_get_main_queue(),^{ [self showStorageProbeResult:result error:error]; });
     });
+}
+- (void)confirmStorageFilesystemTest {
+    if (_busy || _starting || _sessionUsed || _uiOperation) return;
+    UIAlertController *alert=[UIAlertController alertControllerWithTitle:WKLocalized(@"home.storage.test.title")
+        message:WKLocalized(@"home.storage.test.confirm") preferredStyle:UIAlertControllerStyleAlert];
+    [alert addAction:[UIAlertAction actionWithTitle:WKLocalized(@"common.cancel") style:UIAlertActionStyleCancel handler:nil]];
+    [alert addAction:[UIAlertAction actionWithTitle:WKLocalized(@"home.storage.test.run") style:UIAlertActionStyleDefault handler:^(UIAlertAction *a) {
+        (void)a;
+        if (self->_busy || self->_starting || self->_sessionUsed || self->_uiOperation) return;
+        self->_uiOperation=YES; [self render];
+        dispatch_async(dispatch_get_global_queue(QOS_CLASS_UTILITY,0),^{
+            NSError *error=nil;
+            NSDictionary *result=[TKExternalStorageProbe testSelectedFolder:&error];
+            dispatch_async(dispatch_get_main_queue(),^{
+                self->_uiOperation=NO; [self render];
+                [self presentMessage:result?WKLocalized(@"home.storage.test.success"):WKLocalized(@"home.storage.test.failed")
+                    message:result?WKLocalizedFormat(@"home.storage.test.result",result[@"filesystem"]):error.localizedDescription];
+            });
+        });
+    }]];
+    [self presentSheet:alert anchor:nil];
 }
 // Everything about dictation lives on its own screen: the button, the mode, and
 // what happens to the words afterwards.

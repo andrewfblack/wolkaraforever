@@ -1,5 +1,11 @@
 #import "ExternalStorageProbe.h"
 #include <sys/mount.h>
+#include <sys/clonefile.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <unistd.h>
+#include <errno.h>
+#include <string.h>
 
 static NSString *const TKStorageBookmarkKey = @"WolkaraForever.ExternalStorageProbe.BookmarkV1";
 
@@ -81,6 +87,90 @@ static BOOL ProbeError(NSError **error, NSString *message) {
         ProbeError(error,@"Folder permission expired. Choose the folder again in Files."); return nil;
     }
     return [self inspectURL:url error:error];
+}
+
+// The fixture has no relation to WoW's installation or updater directories.
+// It uses the same APFS clone and atomic swap primitives as Updater.m, but
+// never selects a pre-existing child for replacement or deletion.
++ (nullable NSDictionary<NSString *, id> *)testSelectedFolder:(NSError **)error {
+    NSData *bookmark=[NSUserDefaults.standardUserDefaults objectForKey:TKStorageBookmarkKey];
+    if (![bookmark isKindOfClass:NSData.class]) {
+        ProbeError(error,@"No folder selected yet."); return nil;
+    }
+    BOOL stale=NO;
+    NSURL *root=[NSURL URLByResolvingBookmarkData:bookmark options:0 relativeToURL:nil
+        bookmarkDataIsStale:&stale error:error];
+    if (!root || stale) {
+        if (!error || !*error) ProbeError(error,@"The selected folder is unavailable. Choose it again in Files.");
+        return nil;
+    }
+    if (![self startAccessingFolder:root error:error]) return nil;
+    @try {
+        NSDictionary *metadata=[self readMetadataAtURL:root error:error];
+        if (!metadata) return nil;
+        // mkdir is exclusive: neither an existing user folder nor a symlink
+        // can ever become the fixture's test directory.
+        NSString *name=[@".wolkaraforever-storage-test-" stringByAppendingString:NSUUID.UUID.UUIDString];
+        NSString *folder=[root.path stringByAppendingPathComponent:name];
+        if (mkdir(folder.fileSystemRepresentation,0700)!=0) {
+            ProbeError(error,[NSString stringWithFormat:@"Could not create a disposable test folder (%s).",strerror(errno)]);
+            return nil;
+        }
+        BOOL cloned=NO, swapped=NO;
+        NSString *detail=nil;
+        @try {
+            NSString *source=[folder stringByAppendingPathComponent:@"original"];
+            NSString *copy=[folder stringByAppendingPathComponent:@"private-copy"];
+            const char *value="storage-probe-original";
+            int fd=open(source.fileSystemRepresentation,O_CREAT|O_EXCL|O_WRONLY|O_NOFOLLOW,0600);
+            if (fd<0 || write(fd,value,strlen(value))!=(ssize_t)strlen(value) || fsync(fd)!=0) {
+                if (fd>=0) close(fd);
+                detail=[NSString stringWithFormat:@"Cannot create or sync the test file (%s).",strerror(errno)];
+            } else {
+                close(fd);
+                if (clonefile(source.fileSystemRepresentation,copy.fileSystemRepresentation,CLONE_NOFOLLOW)!=0)
+                    detail=[NSString stringWithFormat:@"APFS clone failed (%s).",strerror(errno)];
+                else {
+                    cloned=YES;
+                    NSData *original=[NSData dataWithContentsOfFile:source];
+                    NSData *duplicate=[NSData dataWithContentsOfFile:copy];
+                    if (![original isEqualToData:duplicate]) detail=@"The cloned test file differs from its source.";
+                    else {
+                        const char *changed="storage-probe-updated";
+                        fd=open(copy.fileSystemRepresentation,O_WRONLY|O_TRUNC|O_NOFOLLOW);
+                        if (fd<0 || write(fd,changed,strlen(changed))!=(ssize_t)strlen(changed) || fsync(fd)!=0) {
+                            if (fd>=0) close(fd);
+                            detail=[NSString stringWithFormat:@"Cannot update the private clone (%s).",strerror(errno)];
+                        } else {
+                            close(fd);
+                            if (![[NSData dataWithContentsOfFile:source] isEqualToData:original])
+                                detail=@"Updating the clone changed the original file.";
+                            else if (renamex_np(source.fileSystemRepresentation,copy.fileSystemRepresentation,RENAME_SWAP)!=0)
+                                detail=[NSString stringWithFormat:@"Atomic swap failed (%s).",strerror(errno)];
+                            else {
+                                swapped=YES;
+                                NSData *active=[NSData dataWithContentsOfFile:source];
+                                if (![active isEqualToData:[NSData dataWithBytes:changed length:strlen(changed)]])
+                                    detail=@"Atomic swap did not activate the updated file.";
+                            }
+                        }
+                    }
+                }
+            }
+        } @finally {
+            // Only the just-created folder is removed; never clean by name
+            // from a previous run or touch a sibling in the selected folder.
+            NSError *cleanup=nil;
+            if (![NSFileManager.defaultManager removeItemAtPath:folder error:&cleanup])
+                detail=[NSString stringWithFormat:@"Test folder cleanup failed: %@",cleanup.localizedDescription];
+        }
+        if (detail) {
+            ProbeError(error,detail); return nil;
+        }
+        return @{ @"filesystem":metadata[@"filesystem"], @"clone":@(cloned), @"swap":@(swapped) };
+    } @finally {
+        [root stopAccessingSecurityScopedResource];
+    }
 }
 
 @end
