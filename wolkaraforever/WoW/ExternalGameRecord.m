@@ -113,9 +113,13 @@ static NSString *TKGameRoot(NSString *folderPath,NSString *rootRelative) {
     if (![folderPath isKindOfClass:NSString.class] || !folderPath.isAbsolutePath) {
         TKRecordError(error,@"External game storage is unavailable."); return nil;
     }
-    NSString *rootRelative=record[@"root"];
-    if (rootRelative && (![rootRelative isKindOfClass:NSString.class] || !TKSafeRelative(rootRelative) ||
-        [rootRelative containsString:@"/"])) {
+    id storedRoot=record[@"root"];
+    if (storedRoot && ![storedRoot isKindOfClass:NSString.class]) {
+        TKRecordError(error,@"The external installation record is invalid."); return nil;
+    }
+    // An empty root means the selected folder itself is the game root.
+    NSString *rootRelative=[storedRoot length] ? storedRoot : @"";
+    if (rootRelative.length && (!TKSafeRelative(rootRelative) || [rootRelative containsString:@"/"])) {
         TKRecordError(error,@"The external installation record is invalid."); return nil;
     }
     NSString *root=TKGameRoot([folderPath stringByResolvingSymlinksInPath],rootRelative);
