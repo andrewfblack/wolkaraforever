@@ -46,3 +46,7 @@ xcrun clang -fobjc-arc -Wall -Wextra -Werror -O1 -g \
     -framework Foundation launcher/WoW/ExternalStorageProbe.m tests/test_external_storage_probe.m \
     -o build/wow-launcher/test_external_storage_probe
 build/wow-launcher/test_external_storage_probe
+xcrun clang -fobjc-arc -Wall -Wextra -Werror -O1 -g \
+    -framework Foundation launcher/WoW/ExternalGameRecord.m tests/test_external_game_record.m \
+    -o build/wow-launcher/test_external_game_record
+build/wow-launcher/test_external_game_record

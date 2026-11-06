@@ -68,6 +68,11 @@ still needs a real-device proof before any installation is directed at a drive.
    Documents behavior for existing records. Prove that unavailable drives
    cannot be mistaken for a missing or ready install and that no path can
    escape the selected root. Cover discovery, import, and executable checks.
+   Internal groundwork: `ExternalGameRecord` now validates an app-private
+   bookmark and relative executable path, refuses missing media and symlink
+   escapes, and retains the record when validation fails. The library source
+   type, discovery, and launch integration are not yet connected, so this
+   record alone never marks an installation ready or exposes Play.
 4. **Installer and launch.** Route the complete Forever root, staging and
    capacity checks to the selected volume; hold scoped access for update,
    inspection and guest lifetime. Disable Play and updates when detached;

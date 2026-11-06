@@ -72,6 +72,13 @@ static BOOL ProbeError(NSError **error, NSString *message) {
 }
 
 + (nullable NSDictionary<NSString *, id> *)inspectSelectedFolder:(NSError **)error {
+    NSURL *url=[self beginSelectedFolderAccess:error];
+    if (!url) return nil;
+    @try { return [self readMetadataAtURL:url error:error]; }
+    @finally { [self endSelectedFolderAccess:url]; }
+}
+
++ (nullable NSURL *)beginSelectedFolderAccess:(NSError **)error {
     NSData *bookmark=[NSUserDefaults.standardUserDefaults objectForKey:TKStorageBookmarkKey];
     if (![bookmark isKindOfClass:NSData.class]) {
         ProbeError(error,@"No folder selected yet."); return nil;
@@ -86,7 +93,12 @@ static BOOL ProbeError(NSError **error, NSString *message) {
     if (stale) {
         ProbeError(error,@"Folder permission expired. Choose the folder again in Files."); return nil;
     }
-    return [self inspectURL:url error:error];
+    if (![self startAccessingFolder:url error:error]) return nil;
+    return url;
+}
+
++ (void)endSelectedFolderAccess:(NSURL *)folder {
+    [folder stopAccessingSecurityScopedResource];
 }
 
 // The fixture has no relation to WoW's installation or updater directories.

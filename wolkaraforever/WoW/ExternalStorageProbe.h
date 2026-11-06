@@ -11,6 +11,10 @@ NS_ASSUME_NONNULL_BEGIN
 // Explicitly requested test. Writes only to a newly created, uniquely named
 // child of the selected folder, then removes that child if it still owns it.
 + (nullable NSDictionary<NSString *, id> *)testSelectedFolder:(NSError **)error;
+// Internal-only access lease for the saved folder. No install action uses this
+// yet; the holder must release it after the entire file operation or session.
++ (nullable NSURL *)beginSelectedFolderAccess:(NSError **)error;
++ (void)endSelectedFolderAccess:(NSURL *)folder;
 @end
 
 NS_ASSUME_NONNULL_END
