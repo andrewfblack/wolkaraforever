@@ -44,6 +44,7 @@ jobs:
       TOLKARA_BUNDLE_ID: ${{ inputs.bundle_id || vars.TOLKARA_BUNDLE_ID || 'local.tolkara.app' }}
       TOLKARA_KEYCHAIN_GROUP: ${{ inputs.keychain_group || vars.TOLKARA_KEYCHAIN_GROUP || 'local.tolkara.authorization' }}
       TOLKARA_MODE: developer-service
+      TOLKARA_SYSTEM_ROOTS: "NO"
       NATIVE_GUEST_SHIMS: GENERIC
       GUEST_EXE: ""
     steps:
@@ -162,6 +163,7 @@ jobs:
               -derivedDataPath build/device \
               CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" \
               GUEST_EXE="" NATIVE_GUEST_SHIMS=GENERIC TOLKARA_MODE=developer-service \
+              TOLKARA_SYSTEM_ROOTS=NO \
               build ) > "$log" 2>&1 || {
               grep -E 'error:' "$log" | head -30
               echo "BUILD FAILED -> $log"
