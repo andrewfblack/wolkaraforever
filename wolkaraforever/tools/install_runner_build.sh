@@ -170,8 +170,12 @@ if grep -q "enrollment not attempted" "$tmp/enroll.log"; then
 fi
 
 installed_line=$(xcrun devicectl device info apps --device "$DEVICE" 2>/dev/null | grep -i "$TOLKARA_BUNDLE_ID" || true)
-[ -n "$installed_line" ] || die "the device does not list $TOLKARA_BUNDLE_ID after the install"
-echo "install_runner_build: installed $installed_line"
+if [ -n "$installed_line" ]; then
+    echo "install_runner_build: installed $installed_line"
+else
+    echo "install_runner_build: app catalogue did not list the bundle; requiring a successful direct launch" >&2
+    [ "$no_launch" = 0 ] || die "cannot verify this install with --no-launch when the app catalogue is incomplete"
+fi
 
 if [ "$no_launch" = 0 ]; then
     xcrun devicectl device process launch --terminate-existing --device "$DEVICE" "$TOLKARA_BUNDLE_ID"

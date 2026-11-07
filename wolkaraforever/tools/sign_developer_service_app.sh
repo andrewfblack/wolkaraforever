@@ -124,25 +124,24 @@ python3 "$script_dir/signing_profile.py" inspect \
     --entitlements-out "$tmp/tunnel.entitlements" \
     || die "the tunnel profile is not usable for $bundle.authorization"
 
-# Resolve the requested identity to a full Apple Development name for this team.
-signing_identity=$(
-    security find-identity -v -p codesigning |
-        grep -F "($team)" | grep -F "$identity_filter" | head -1 |
-        sed -n 's/.*"\(.*\)".*/\1/p'
-) || true
-if [ -z "$signing_identity" ]; then
+# Xcode can use a development identity by its SHA-1 even when `security
+# find-identity` does not enumerate it in the Terminal keychain search list.
+# The signed app is checked for Apple Development authority and the exact team
+# after packaging; a distribution identity never passes that check.
+if [[ "$identity_filter" =~ ^[0-9A-Fa-f]{40}$ ]]; then
+    signing_identity=$identity_filter
+    echo "sign_developer_service_app: signing with Xcode's selected identity (fingerprint withheld)"
+else
     signing_identity=$(
         security find-identity -v -p codesigning |
-            grep -F "($team)" | head -1 |
+            grep -F "Apple Development:" | grep -F "($team)" | grep -F "$identity_filter" | head -1 |
             sed -n 's/.*"\(.*\)".*/\1/p'
     ) || true
+    [ -z "$signing_identity" ] || echo "sign_developer_service_app: signing with Apple Development for the selected team"
 fi
 [ -n "$signing_identity" ] || {
-    echo "sign_developer_service_app: available code-signing identities:" >&2
-    security find-identity -v -p codesigning >&2 || true
-    die "no code-signing identity for team $team (expected an Apple Development certificate)"
+    die "no Apple Development code-signing identity is available for the selected team (an Apple Distribution certificate cannot use development profiles)"
 }
-echo "sign_developer_service_app: signing with '$signing_identity'"
 
 # The app and extension read this key from Info.plist at runtime. Xcode normally
 # substitutes $(AppIdentifierPrefix) during signing; an unsigned build cannot, so

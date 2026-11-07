@@ -138,6 +138,8 @@ verify_signed() { # path expected-identifier kind
         fail "$(basename "$path") is signed as '$(printf '%s\n' "$signature" | sed -n 's/^Identifier=//p' | head -1)', expected $identifier"
     printf '%s\n' "$signature" | grep -qx "TeamIdentifier=$team" ||
         fail "$(basename "$path") is not signed by team $team"
+    printf '%s\n' "$signature" | grep -q '^Authority=Apple Development:' ||
+        fail "$(basename "$path") must use an Apple Development certificate"
     codesign -d --entitlements :- "$path" > "$tmp/$kind.entitlements" 2>/dev/null ||
         fail "$(basename "$path") has no readable entitlements"
     if ! python3 - "$tmp/$kind.entitlements" "$team" "$identifier" "$expected_group" "$kind" <<'PY'
@@ -145,7 +147,7 @@ import plistlib, sys
 path, team, identifier, group, kind = sys.argv[1:]
 with open(path, "rb") as source:
     entitlements = plistlib.load(source)
-if entitlements.get("application-identifier") != identifier:
+if entitlements.get("application-identifier") != team + "." + identifier:
     raise SystemExit("application-identifier mismatch")
 if entitlements.get("com.apple.developer.team-identifier") not in (None, team):
     raise SystemExit("team mismatch")
