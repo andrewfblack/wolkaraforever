@@ -1,0 +1,260 @@
+# Signed Developer-service WolkaraForever build.
+#
+# The runner compiles and signs; it cannot install or enroll an iPad. Those are
+# the Mac steps in development/guides/GITHUB_BUILD.md. The workflow is manual on
+# purpose: it uses repository secrets and should never run for a fork PR.
+
+name: Developer service (signed)
+
+on:
+  push:
+    branches: [ci/signed-developer-service]
+  workflow_dispatch:
+    inputs:
+      source_ref:
+        description: Branch, tag or SHA to build
+        required: true
+        default: feature/external-install-records
+      bundle_id:
+        description: App bundle identifier (blank uses the TOLKARA_BUNDLE_ID variable)
+        required: false
+        default: ""
+      keychain_group:
+        description: Keychain group (blank uses the TOLKARA_KEYCHAIN_GROUP variable)
+        required: false
+        default: ""
+      sign:
+        description: Sign with the repository certificate and profiles
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: developer-service-${{ github.ref }}-${{ inputs.source_ref }}
+  cancel-in-progress: false
+
+jobs:
+  signed:
+    name: Build and sign
+    runs-on: macos-26
+    env:
+      DEVELOPMENT_TEAM: ${{ vars.DEVELOPMENT_TEAM }}
+      TOLKARA_BUNDLE_ID: ${{ inputs.bundle_id || vars.TOLKARA_BUNDLE_ID || 'local.tolkara.app' }}
+      TOLKARA_KEYCHAIN_GROUP: ${{ inputs.keychain_group || vars.TOLKARA_KEYCHAIN_GROUP || 'local.tolkara.authorization' }}
+      TOLKARA_MODE: developer-service
+      NATIVE_GUEST_SHIMS: GENERIC
+      GUEST_EXE: ""
+    steps:
+      - name: Check out the source to build
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ inputs.source_ref || 'feature/external-install-records' }}
+          path: source
+          fetch-depth: 1
+
+      - name: Check out the CI helper scripts
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ github.ref }}
+          path: ci
+          fetch-depth: 1
+
+      - name: Check the workflow settings
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.sign }}
+        env:
+          CERT: ${{ secrets.SIGNING_CERT_P12_BASE64 }}
+          CERT_PASSWORD: ${{ secrets.SIGNING_CERT_PASSWORD }}
+          APP_PROFILE: ${{ secrets.PROFILE_APP_BASE64 }}
+          TUNNEL_PROFILE: ${{ secrets.PROFILE_TUNNEL_BASE64 }}
+        run: |
+          set -u
+          missing=0
+          for name in DEVELOPMENT_TEAM TOLKARA_BUNDLE_ID TOLKARA_KEYCHAIN_GROUP; do
+              eval "value=\${$name:-}"
+              if [ -z "$value" ]; then
+                  echo "::error::$name is not set (set the repository variable or pass the workflow input)"
+                  missing=1
+              fi
+          done
+          for name in CERT CERT_PASSWORD APP_PROFILE TUNNEL_PROFILE; do
+              eval "value=\${$name:-}"
+              if [ -z "$value" ]; then
+                  echo "::error::$name is empty (set the repository secret)"
+                  missing=1
+              fi
+          done
+          [ "$missing" = 0 ]
+
+      - name: Install XcodeGen
+        run: brew install xcodegen
+
+      - name: Import the signing certificate
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.sign }}
+        env:
+          SIGNING_CERT_P12_BASE64: ${{ secrets.SIGNING_CERT_P12_BASE64 }}
+          SIGNING_CERT_PASSWORD: ${{ secrets.SIGNING_CERT_PASSWORD }}
+        run: |
+          set -euo pipefail
+          umask 077
+          KEYCHAIN="$RUNNER_TEMP/signing.keychain-db"
+          echo "KEYCHAIN=$KEYCHAIN" >> "$GITHUB_ENV"
+          cert="$RUNNER_TEMP/signing.p12"
+          keychain_password=$(python3 -c 'import secrets; print(secrets.token_hex(24))')
+          printf '%s' "$SIGNING_CERT_P12_BASE64" |
+              python3 -c 'import base64,sys; sys.stdout.buffer.write(base64.b64decode(sys.stdin.read()))' > "$cert"
+          security create-keychain -p "$keychain_password" "$KEYCHAIN"
+          security set-keychain-settings -lut 21600 "$KEYCHAIN"
+          security unlock-keychain -p "$keychain_password" "$KEYCHAIN"
+          security import "$cert" -k "$KEYCHAIN" -P "$SIGNING_CERT_PASSWORD" \
+              -T /usr/bin/codesign -T /usr/bin/security > /dev/null
+          security set-key-partition-list -S apple-tool:,apple:,codesign: \
+              -s -k "$keychain_password" "$KEYCHAIN" > /dev/null
+          security list-keychains -d user -s "$KEYCHAIN"
+          security default-keychain -d user -s "$KEYCHAIN"
+          rm -f "$cert"
+          security find-identity -v -p codesigning "$KEYCHAIN"
+          security find-identity -v -p codesigning "$KEYCHAIN" |
+              grep "($DEVELOPMENT_TEAM)" > /dev/null ||
+              { echo "::error::the imported certificate has no identity for team $DEVELOPMENT_TEAM"; exit 1; }
+
+      - name: Install the provisioning profiles
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.sign }}
+        env:
+          PROFILE_APP_BASE64: ${{ secrets.PROFILE_APP_BASE64 }}
+          PROFILE_TUNNEL_BASE64: ${{ secrets.PROFILE_TUNNEL_BASE64 }}
+        run: |
+          set -euo pipefail
+          umask 077
+          mkdir -p "$RUNNER_TEMP/profiles"
+          printf '%s' "$PROFILE_APP_BASE64" |
+              python3 -c 'import base64,sys; sys.stdout.buffer.write(base64.b64decode(sys.stdin.read()))' \
+              > "$RUNNER_TEMP/profiles/app.mobileprovision"
+          printf '%s' "$PROFILE_TUNNEL_BASE64" |
+              python3 -c 'import base64,sys; sys.stdout.buffer.write(base64.b64decode(sys.stdin.read()))' \
+              > "$RUNNER_TEMP/profiles/tunnel.mobileprovision"
+          security cms -D -i "$RUNNER_TEMP/profiles/app.mobileprovision" > /dev/null
+          security cms -D -i "$RUNNER_TEMP/profiles/tunnel.mobileprovision" > /dev/null
+
+      - name: Record the source
+        id: source
+        working-directory: source
+        run: |
+          echo "revision=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+
+      - name: Prepare the source tree
+        working-directory: source
+        run: wolkaraforever/tools/prepare.sh
+
+      - name: Build the unsigned Developer-service app
+        working-directory: source
+        run: |
+          set -euo pipefail
+          mkdir -p logs
+          log=logs/github-signed-build.log
+          ( cd build/platform && xcodebuild \
+              -project Tolkara.xcodeproj \
+              -scheme Tolkara \
+              -configuration Debug \
+              -sdk iphoneos \
+              -destination 'generic/platform=iOS' \
+              -derivedDataPath build/device \
+              CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" \
+              GUEST_EXE="" NATIVE_GUEST_SHIMS=GENERIC TOLKARA_MODE=developer-service \
+              build ) > "$log" 2>&1 || {
+              grep -E 'error:' "$log" | head -30
+              echo "BUILD FAILED -> $log"
+              exit 1
+          }
+          grep -q 'BUILD SUCCEEDED' "$log" || {
+              tail -40 "$log"
+              echo "BUILD FAILED -> $log"
+              exit 1
+          }
+
+      - name: Sign the app and verify the IPA
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.sign }}
+        working-directory: source
+        env:
+          TOLKARA_SOURCE_REVISION: ${{ steps.source.outputs.revision }}
+          TOLKARA_SOURCE_REF: ${{ inputs.source_ref }}
+        run: |
+          set -euo pipefail
+          ipa=build/platform/WolkaraForever-developer-service.ipa
+          report=build/platform/WolkaraForever-developer-service.verification.txt
+          bash "$GITHUB_WORKSPACE/ci/wolkaraforever/tools/sign_developer_service_app.sh" \
+              --app build/platform/build/device/Build/Products/Debug-iphoneos/Tolkara.app \
+              --app-profile "$RUNNER_TEMP/profiles/app.mobileprovision" \
+              --tunnel-profile "$RUNNER_TEMP/profiles/tunnel.mobileprovision" \
+              --team "$DEVELOPMENT_TEAM" \
+              --bundle-id "$TOLKARA_BUNDLE_ID" \
+              --keychain-group "$TOLKARA_KEYCHAIN_GROUP" \
+              --identity "Apple Development" \
+              --output "$ipa" \
+              --report "$report" \
+              --revision "$TOLKARA_SOURCE_REVISION"
+          {
+              echo "source_ref=$TOLKARA_SOURCE_REF"
+              echo "source_revision=$TOLKARA_SOURCE_REVISION"
+              echo "workflow_run=$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
+              echo "bundle_id=$TOLKARA_BUNDLE_ID"
+              echo "development_team=$DEVELOPMENT_TEAM"
+          } > build/platform/WolkaraForever-developer-service.build.txt
+          cat "$report" >> "$GITHUB_STEP_SUMMARY"
+          echo "## Signed IPA" >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+          cat build/platform/WolkaraForever-developer-service.build.txt >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload the signed IPA
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.sign }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: WolkaraForever-developer-service
+          path: |
+            source/build/platform/WolkaraForever-developer-service.ipa
+            source/build/platform/WolkaraForever-developer-service.verification.txt
+            source/build/platform/WolkaraForever-developer-service.build.txt
+          if-no-files-found: error
+
+      - name: Package the unsigned app for inspection
+        if: ${{ github.event_name == 'push' || !inputs.sign }}
+        working-directory: source
+        run: |
+          set -euo pipefail
+          app=build/platform/build/device/Build/Products/Debug-iphoneos/Tolkara.app
+          [ -d "$app" ] || { echo "the build did not produce $app"; exit 1; }
+          ditto -c -k --sequesterRsrc --keepParent "$app" \
+              build/platform/WolkaraForever-developer-service-unsigned.zip
+          {
+              echo "source_ref=${{ inputs.source_ref || 'feature/external-install-records' }}"
+              echo "source_revision=$(git rev-parse HEAD)"
+              echo "workflow_run=$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
+              echo "bundle_id=$TOLKARA_BUNDLE_ID"
+              echo "signed=no (build-only dispatch)"
+          } > build/platform/WolkaraForever-developer-service-unsigned.build.txt
+
+      - name: Upload the unsigned app
+        if: ${{ github.event_name == 'push' || !inputs.sign }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: WolkaraForever-developer-service-unsigned
+          path: |
+            source/build/platform/WolkaraForever-developer-service-unsigned.zip
+            source/build/platform/WolkaraForever-developer-service-unsigned.build.txt
+          if-no-files-found: error
+
+      - name: Upload logs on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: developer-service-build-logs
+          path: |
+            source/logs/
+            source/build/platform/logs/
+          if-no-files-found: ignore
+
+      - name: Remove the temporary keychain
+        if: always()
+        run: security delete-keychain "${KEYCHAIN:-$RUNNER_TEMP/signing.keychain-db}" 2>/dev/null || true
