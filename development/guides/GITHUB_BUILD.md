@@ -15,6 +15,25 @@ This page therefore splits the work:
 The runner never sees the iPad, and no game files or account data enter the
 workflow.
 
+### Keep the private signing key on your Mac
+
+If you do **not** want an Apple Development private key in GitHub Secrets, use
+the CI branch's secret-free, push-triggered build instead. Set the repository
+variables `TOLKARA_BUNDLE_ID` and `TOLKARA_KEYCHAIN_GROUP` to match your
+ignored Mac `local.env`, then push `ci/signed-developer-service`. Download its
+`WolkaraForever-developer-service-unsigned` artifact. It is a ZIP containing an
+unsigned `Tolkara.app`, **not an installable IPA**. Sign its app and tunnel
+extension on the Mac with `wolkaraforever/tools/sign_developer_service_app.sh`,
+passing the two Xcode-managed development profiles for that exact bundle and
+team; the script verifies the signed IPA before it can be installed. Use
+`wolkaraforever/tools/install_runner_build.sh --ipa PATH` to verify and install
+it on the connected iPad. This route needs no GitHub signing secrets or manual
+workflow dispatch; the Mac remains the signing and enrollment host.
+
+The numbered steps below describe the alternative in which the runner signs
+the IPA itself. Choose one signing route; do not upload a private key merely to
+prove the runner's unsigned build compiles.
+
 ## 1. Install Xcode on the Mac
 
 Xcode 26.0–26.3 are universal and run on Intel Macs with macOS Sequoia 15.6 or
