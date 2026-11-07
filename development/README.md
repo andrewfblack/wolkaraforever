@@ -35,6 +35,7 @@ Key entry points: [project map](architecture/PROJECT_MAP.md),
 [repository workflow](guides/REPOSITORY_WORKFLOW.md),
 [layer architecture](architecture/WOLKARAFOREVER_LAYER.md),
 [contributing](guides/CONTRIBUTING.md), [localization](guides/LOCALIZATION.md),
-[profiles](guides/PROFILES.md), and the
-[WoW Forever profile](guides/WOW_FOREVER_PROFILE.md). Historical plans and
+[profiles](guides/PROFILES.md), the
+[WoW Forever profile](guides/WOW_FOREVER_PROFILE.md), and
+[building on a GitHub runner](guides/GITHUB_BUILD.md). Historical plans and
 investigations are retained only in [archive/](archive/).
