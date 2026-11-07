@@ -7,6 +7,8 @@
 name: Developer service (signed)
 
 on:
+  push:
+    branches: [ci/signed-developer-service]
   workflow_dispatch:
     inputs:
       source_ref:
@@ -48,7 +50,7 @@ jobs:
       - name: Check out the source to build
         uses: actions/checkout@v5
         with:
-          ref: ${{ inputs.source_ref }}
+          ref: ${{ inputs.source_ref || 'feature/external-install-records' }}
           path: source
           fetch-depth: 1
 
@@ -60,7 +62,7 @@ jobs:
           fetch-depth: 1
 
       - name: Check the workflow settings
-        if: ${{ inputs.sign }}
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.sign }}
         env:
           CERT: ${{ secrets.SIGNING_CERT_P12_BASE64 }}
           CERT_PASSWORD: ${{ secrets.SIGNING_CERT_PASSWORD }}
@@ -89,7 +91,7 @@ jobs:
         run: brew install xcodegen
 
       - name: Import the signing certificate
-        if: ${{ inputs.sign }}
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.sign }}
         env:
           SIGNING_CERT_P12_BASE64: ${{ secrets.SIGNING_CERT_P12_BASE64 }}
           SIGNING_CERT_PASSWORD: ${{ secrets.SIGNING_CERT_PASSWORD }}
@@ -118,7 +120,7 @@ jobs:
               { echo "::error::the imported certificate has no identity for team $DEVELOPMENT_TEAM"; exit 1; }
 
       - name: Install the provisioning profiles
-        if: ${{ inputs.sign }}
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.sign }}
         env:
           PROFILE_APP_BASE64: ${{ secrets.PROFILE_APP_BASE64 }}
           PROFILE_TUNNEL_BASE64: ${{ secrets.PROFILE_TUNNEL_BASE64 }}
@@ -172,7 +174,7 @@ jobs:
           }
 
       - name: Sign the app and verify the IPA
-        if: ${{ inputs.sign }}
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.sign }}
         working-directory: source
         env:
           TOLKARA_SOURCE_REVISION: ${{ steps.source.outputs.revision }}
@@ -206,7 +208,7 @@ jobs:
           echo '```' >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload the signed IPA
-        if: ${{ inputs.sign }}
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.sign }}
         uses: actions/upload-artifact@v4
         with:
           name: WolkaraForever-developer-service
@@ -217,7 +219,7 @@ jobs:
           if-no-files-found: error
 
       - name: Package the unsigned app for inspection
-        if: ${{ !inputs.sign }}
+        if: ${{ github.event_name == 'push' || !inputs.sign }}
         working-directory: source
         run: |
           set -euo pipefail
@@ -226,7 +228,7 @@ jobs:
           ditto -c -k --sequesterRsrc --keepParent "$app" \
               build/platform/WolkaraForever-developer-service-unsigned.zip
           {
-              echo "source_ref=${{ inputs.source_ref }}"
+              echo "source_ref=${{ inputs.source_ref || 'feature/external-install-records' }}"
               echo "source_revision=$(git rev-parse HEAD)"
               echo "workflow_run=$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
               echo "bundle_id=$TOLKARA_BUNDLE_ID"
@@ -234,7 +236,7 @@ jobs:
           } > build/platform/WolkaraForever-developer-service-unsigned.build.txt
 
       - name: Upload the unsigned app
-        if: ${{ !inputs.sign }}
+        if: ${{ github.event_name == 'push' || !inputs.sign }}
         uses: actions/upload-artifact@v4
         with:
           name: WolkaraForever-developer-service-unsigned

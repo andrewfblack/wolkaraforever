@@ -126,20 +126,26 @@ for pull requests from forks.
 
 ## 5. Dispatch the signed build
 
-The workflow and its helper scripts live on the CI branch, and the input says
-which source branch to build:
+Pushing `ci/signed-developer-service` triggers a **build-only** runner check
+against `feature/external-install-records`. It uploads an unsigned `.zip` for
+inspection; this is **not installable**. GitHub permits manual dispatch only
+for a workflow that already exists on the repository's default branch. After
+the CI pull request is reviewed and merged to `main`, run the signed workflow;
+the input says which trusted source branch to build:
 
 ```sh
 gh workflow run developer-service-signed.yml \
     --repo andrewfblack/wolkaraforever \
-    --ref ci/signed-developer-service \
+    --ref main \
     -f source_ref=feature/external-install-records
 gh run watch --repo andrewfblack/wolkaraforever
 ```
 
-Or use **Actions > Developer service (signed) > Run workflow** and choose the
-CI branch. The default `source_ref` is the current feature branch; set it to
-`main` or another branch when needed.
+Or use **Actions > Developer service (signed) > Run workflow** and choose
+`main`. The default `source_ref` is the current feature branch; set it to
+`main` or another **trusted** branch when needed. A signed run executes the
+selected branch's Xcode build scripts with access to signing material; never
+dispatch it for an untrusted pull request or arbitrary contributor branch.
 
 The run uploads `WolkaraForever-developer-service` containing:
 
