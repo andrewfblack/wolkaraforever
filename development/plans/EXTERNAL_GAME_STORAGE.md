@@ -1,7 +1,9 @@
 # External game storage: implementation plan
 
-Status: folder probe and opt-in disposable-file test implemented; USB-C game storage is **not implemented**. Do not move an
-existing installation or replace its `Data` directory with a symlink.
+Status: folder probe and opt-in disposable-file test implemented. The experimental
+external-install-switch branch adds a manual Internal/SD source choice and fresh SD
+installation entry point; **a full SD install has not been validated on a device**.
+Do not move an existing installation or replace its `Data` directory with a symlink.
 
 ## Goal and initial scope
 
@@ -77,12 +79,12 @@ still needs a real-device proof before any installation is directed at a drive.
    record reserves `World of Warcraft` on the card, Forever inspection reports
    disconnected media as unavailable (never Missing), the updater writes and
    stages on the card under that lease, and a verified executable is attached
-   and registered only after activation. No UI creates the record yet, so
-   Install to SD remains hidden. The rows that assume internal storage
+    and registered only after activation. The experimental source switch now
+    creates a pending record only after explicit confirmation; Internal remains
+    selected by default and keeps its own install/repair requests. The rows that assume internal storage
    (add-ons, UI backup/restore, graphics reset, locale writer) are disabled
    for external installs instead of operating on an unleased path. Still
-   missing: an opt-in installer action with selection and confirmation,
-   scoped leases for those file-operation rows, and device evidence for install,
+    missing: scoped leases for those file-operation rows, and device evidence for install,
    disconnect, reconnect and play.
 4. **Installer and launch.** Route the complete Forever root, staging and
    capacity checks to the selected volume; hold scoped access for update,

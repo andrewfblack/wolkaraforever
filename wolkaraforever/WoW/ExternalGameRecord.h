@@ -8,6 +8,8 @@ NS_ASSUME_NONNULL_BEGIN
 // what an install action creates; it never marks an installation ready.
 @interface TKExternalGameRecord : NSObject
 + (BOOL)hasRecord;
++ (BOOL)isSelectedForForever;
++ (void)selectForForever:(BOOL)selected;
 + (BOOL)hasExecutable;
 + (nullable NSString *)recordedExecutable;
 // Reserves `World of Warcraft` under the selected folder. Refuses an existing

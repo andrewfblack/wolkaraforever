@@ -143,6 +143,13 @@
 "home.storage.test.success" = "Dateisystemtest bestanden";
 "home.storage.test.failed" = "Dateisystemtest fehlgeschlagen";
 "home.storage.test.result" = "Das %1$@-Dateisystem hat die Prüfungen für das Klonen und den atomaren Austausch kleiner Dateien bestanden. Dies beweist noch nicht, dass WoW von diesem Laufwerk installiert oder gespielt werden kann.";
+"home.storage.source.internal" = "Spielspeicher: iPad (die SD-Kopie, falls vorhanden, bleibt erhalten).";
+"home.storage.source.sd" = "Spielspeicher: SD-Karte (die iPad-Kopie bleibt erhalten).";
+"home.storage.useInternal" = "Spiel im iPad-Speicher verwenden";
+"home.storage.useSD" = "Spiel auf SD-Karte verwenden";
+"home.storage.chooseFirst" = "Wähle zuerst mit Speicherordner prüfen einen leeren Ordner auf der SD-Karte aus. Die iPad-Installation wird weder verschoben noch gelöscht.";
+"home.storage.confirmFresh" = "Damit wird die SD-Karte für einen separaten, neuen Forever-Download ausgewählt. Das vorhandene Spiel im iPad-Speicher bleibt unverändert. Auf der Karte darf noch kein Ordner namens World of Warcraft vorhanden sein. Bei Trennung der Karte beginnt nicht automatisch ein Download auf dem iPad. Fortfahren?";
+"home.storage.confirmSwitch" = "SD-Karte verwenden";
 "home.storage.available" = "Ordner ist erreichbar";
 "home.storage.unavailable" = "Ordner ist nicht erreichbar";
 "home.storage.unknown" = "Der Ordner konnte nicht geprüft werden.";

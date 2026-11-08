@@ -545,8 +545,9 @@ static NSNotificationName const TKForeverLayoutDidChange = @"AKGamepadLayoutDidC
 - (void)checkForUpdatesAndLaunch:(BOOL)launch { [self checkForUpdatesAndLaunch:launch install:NO]; }
 - (void)checkForUpdatesAndLaunch:(BOOL)launch install:(BOOL)install {
     if (_starting || _sessionUsed) return;
-    NSString *installKey=[@"WoWInstallRequested." stringByAppendingString:_product[@"id"]];
-    NSString *repairKey=[@"WoWRepairRequested." stringByAppendingString:_product[@"id"]];
+    NSString *sourceSuffix=([_product[@"id"] isEqual:@"wowf"] && [TKExternalGameRecord isSelectedForForever])?@".sd":@"";
+    NSString *installKey=[[@"WoWInstallRequested." stringByAppendingString:_product[@"id"]] stringByAppendingString:sourceSuffix];
+    NSString *repairKey=[[@"WoWRepairRequested." stringByAppendingString:_product[@"id"]] stringByAppendingString:sourceSuffix];
     if(install && _installation.state==TKWoWInstallationNeedsRepair)
         [NSUserDefaults.standardUserDefaults setBool:YES forKey:repairKey];
     if(install)[NSUserDefaults.standardUserDefaults setBool:YES forKey:installKey];
@@ -567,9 +568,9 @@ static NSNotificationName const TKForeverLayoutDidChange = @"AKGamepadLayoutDidC
         [self->_library discover];
         NSError *error=nil;
         NSDictionary *plan=[client planForProduct:product[@"id"] region:region locale:locale error:&error];
-        // A registered external Forever install is authoritative: a missing
-        // card is reported as unavailable, never as a fresh internal install.
-        BOOL external=[product[@"id"] isEqual:@"wowf"] && [TKExternalGameRecord hasRecord];
+        // The chosen installation is authoritative. A missing card or record
+        // never silently falls back to the separate internal installation.
+        BOOL external=[product[@"id"] isEqual:@"wowf"] && [TKExternalGameRecord isSelectedForForever];
         TKWoWInstallation *installation=plan?(external?
             TKWoWInspectExternalInstallation(product,plan):
             TKWoWInspectInstallation(self->_library,product,plan)):nil;
@@ -708,7 +709,9 @@ static NSNotificationName const TKForeverLayoutDidChange = @"AKGamepadLayoutDidC
 }
 - (void)repairInstallation {
     if(_busy || _starting || _sessionUsed || !_installation.app)return;
-    [NSUserDefaults.standardUserDefaults setBool:YES forKey:[@"WoWRepairRequested." stringByAppendingString:_product[@"id"]]];
+    NSString *key=[@"WoWRepairRequested." stringByAppendingString:_product[@"id"]];
+    if ([_product[@"id"] isEqual:@"wowf"] && [TKExternalGameRecord isSelectedForForever]) key=[key stringByAppendingString:@".sd"];
+    [NSUserDefaults.standardUserDefaults setBool:YES forKey:key];
     [self checkForUpdatesAndLaunch:NO install:YES];
 }
 - (void)configureButton:(UIButton *)button title:(NSString *)title filled:(BOOL)filled {
@@ -1098,7 +1101,11 @@ static NSNotificationName const TKForeverLayoutDidChange = @"AKGamepadLayoutDidC
 }
 - (void)settings {
     UIAlertController *sheet=[UIAlertController alertControllerWithTitle:WKLocalized(@"home.settings.title")
-        message:WKLocalized(@"home.settings.message") preferredStyle:UIAlertControllerStyleActionSheet];
+        message:[_product[@"id"] isEqual:@"wowf"] ?
+            [NSString stringWithFormat:@"%@\n%@",WKLocalized(@"home.settings.message"),
+                WKLocalized([TKExternalGameRecord isSelectedForForever]?@"home.storage.source.sd":@"home.storage.source.internal")]:
+            WKLocalized(@"home.settings.message")
+        preferredStyle:UIAlertControllerStyleActionSheet];
     if(!_busy && !_starting && !_sessionUsed && _installation.app &&
        _installation.app.source!=TKAppSourceExternal) {
         [sheet addAction:[UIAlertAction actionWithTitle:WKLocalized(@"home.settings.manageAddons") style:UIAlertActionStyleDefault handler:^(UIAlertAction *a) {
@@ -1112,6 +1119,11 @@ static NSNotificationName const TKForeverLayoutDidChange = @"AKGamepadLayoutDidC
         (void)a; [self diagnostics];
     }]];
     if (!_busy && !_starting && !_sessionUsed && !_uiOperation) {
+        if ([_product[@"id"] isEqual:@"wowf"])
+            [sheet addAction:[UIAlertAction actionWithTitle:WKLocalized([TKExternalGameRecord isSelectedForForever]?
+                @"home.storage.useInternal":@"home.storage.useSD") style:UIAlertActionStyleDefault handler:^(UIAlertAction *a) {
+                (void)a; [self chooseForeverStorage];
+            }]];
         [sheet addAction:[UIAlertAction actionWithTitle:WKLocalized(@"home.storage.choose") style:UIAlertActionStyleDefault handler:^(UIAlertAction *a) {
             (void)a; [self chooseStorageProbeFolder];
         }]];
@@ -1135,6 +1147,36 @@ static NSNotificationName const TKForeverLayoutDidChange = @"AKGamepadLayoutDidC
                      message:self->_startupFailure?:(self->_error?:self->_installation.error).localizedDescription];
     }]];
     [self presentSheet:sheet anchor:nil];
+}
+- (void)chooseForeverStorage {
+    if (_busy || _starting || _sessionUsed || _uiOperation || ![_product[@"id"] isEqual:@"wowf"]) return;
+    if ([TKExternalGameRecord isSelectedForForever]) {
+        [TKExternalGameRecord selectForForever:NO]; [self refresh]; return;
+    }
+    if ([TKExternalGameRecord hasRecord]) {
+        [TKExternalGameRecord selectForForever:YES]; [self refresh]; return;
+    }
+    if (![TKExternalStorageProbe hasSelection]) {
+        [self presentMessage:WKLocalized(@"home.storage.useSD") message:WKLocalized(@"home.storage.chooseFirst")];
+        return;
+    }
+    UIAlertController *confirm=[UIAlertController alertControllerWithTitle:WKLocalized(@"home.storage.useSD")
+        message:WKLocalized(@"home.storage.confirmFresh") preferredStyle:UIAlertControllerStyleAlert];
+    [confirm addAction:[UIAlertAction actionWithTitle:WKLocalized(@"common.cancel") style:UIAlertActionStyleCancel handler:nil]];
+    [confirm addAction:[UIAlertAction actionWithTitle:WKLocalized(@"home.storage.confirmSwitch") style:UIAlertActionStyleDefault handler:^(UIAlertAction *a) {
+        (void)a;
+        if (self->_busy || self->_starting || self->_sessionUsed || self->_uiOperation) return;
+        NSError *error=nil;
+        NSURL *folder=[TKExternalStorageProbe beginSelectedFolderAccess:&error];
+        BOOL reserved=folder && [TKExternalGameRecord beginInstallInFolder:folder error:&error];
+        if (folder) [TKExternalStorageProbe endSelectedFolderAccess:folder];
+        if (!reserved) {
+            [self presentMessage:WKLocalized(@"home.storage.useSD") message:error.localizedDescription?:WKLocalized(@"home.storage.unavailable")];
+            return;
+        }
+        [TKExternalGameRecord selectForForever:YES]; [self refresh];
+    }]];
+    [self presentSheet:confirm anchor:nil];
 }
 // This diagnostic never changes the install location or touches game data.
 - (void)chooseStorageProbeFolder {

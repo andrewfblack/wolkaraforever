@@ -1697,9 +1697,11 @@ static NSArray<NSString *> *VisibleTexts(UIView *view) {
     assert([sheet isKindOfClass:UIAlertController.class]);
     assert([sheet.title isEqual:@"Einstellungen"]);
     assert([sheet.message containsString:@"Aktualisierungen werden automatisch installiert"]);
+    assert([sheet.message containsString:@"Spielspeicher: iPad"]);
     NSArray *titles = [sheet.actions valueForKey:@"title"];
     for (NSString *expected in @[@"Add-ons verwalten", @"Spieldateien prüfen und reparieren",
-                                  @"Diagnose und Protokolle", @"Speicherordner prüfen (keine Spieldateien verschoben)",
+                                   @"Diagnose und Protokolle", @"Spiel auf SD-Karte verwenden",
+                                   @"Speicherordner prüfen (keine Spieldateien verschoben)",
                                   @"Über diese App und Open-Source-Lizenzen",
                                  @"Abbrechen"])
         assert([titles containsObject:expected]);
@@ -1907,6 +1909,8 @@ static NSArray<NSString *> *VisibleTexts(UIView *view) {
     assert([titles containsObject:@"Manage add-ons"]);
     assert([titles containsObject:@"Verify and repair game files"]);
     assert([titles containsObject:@"Diagnostics and logs"]);
+    assert([settings.message containsString:@"Game storage: iPad"]);
+    assert([titles containsObject:@"Use game on SD card"]);
     assert([titles containsObject:@"Probe a storage folder (no game files moved)"]);
     assert([titles containsObject:@"About and open-source licenses"]);
     // The probe picker opens without changing the install or requiring a drive.

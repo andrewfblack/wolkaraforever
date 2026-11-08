@@ -3,12 +3,21 @@
 #include <assert.h>
 
 static NSString *const Key=@"WolkaraForever.ExternalGameRecordV1";
+static NSString *const SelectedKey=@"WolkaraForever.ExternalGameSelectedV1";
 static NSString *const Relative=@"_forever_/World of Warcraft.app/Contents/MacOS/World of Warcraft";
 
 int main(void) { @autoreleasepool {
     NSUserDefaults *defaults=NSUserDefaults.standardUserDefaults;
     id previous=[defaults objectForKey:Key];
+    id previousSelection=[defaults objectForKey:SelectedKey];
     [defaults removeObjectForKey:Key];
+    [defaults removeObjectForKey:SelectedKey];
+    assert(![TKExternalGameRecord isSelectedForForever]);
+    [TKExternalGameRecord selectForForever:YES];
+    // Even a missing record must remain selected, so the launcher fails closed
+    // instead of offering an accidental second download to internal storage.
+    assert([TKExternalGameRecord isSelectedForForever] && ![TKExternalGameRecord hasRecord]);
+    [TKExternalGameRecord selectForForever:NO];
     NSFileManager *fm=NSFileManager.defaultManager;
 
     // Validation and path bounds, independent of the record.
@@ -44,6 +53,11 @@ int main(void) { @autoreleasepool {
     error=nil;
     assert([TKExternalGameRecord beginInstallInFolder:[NSURL fileURLWithPath:card isDirectory:YES] error:&error]);
     assert([TKExternalGameRecord hasRecord] && ![TKExternalGameRecord hasExecutable]);
+    [TKExternalGameRecord selectForForever:YES];
+    assert([TKExternalGameRecord isSelectedForForever]);
+    [TKExternalGameRecord selectForForever:NO];
+    assert(![TKExternalGameRecord isSelectedForForever] && [TKExternalGameRecord hasRecord]);
+    [TKExternalGameRecord selectForForever:YES];
     assert(![fm fileExistsAtPath:[card stringByAppendingPathComponent:@"World of Warcraft"]]);
     NSString *gameRoot=[TKExternalGameRecord gameRootInFolder:card error:&error];
     assert([gameRoot isEqual:[[card stringByResolvingSymlinksInPath]
@@ -86,5 +100,7 @@ int main(void) { @autoreleasepool {
 
     if (previous) [defaults setObject:previous forKey:Key];
     else [defaults removeObjectForKey:Key];
+    if (previousSelection) [defaults setObject:previousSelection forKey:SelectedKey];
+    else [defaults removeObjectForKey:SelectedKey];
     puts("external game record PASS: validated paths, traversal, symlink escape, pending install, attach and absent media");
 } return 0; }
