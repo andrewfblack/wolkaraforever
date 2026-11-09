@@ -92,6 +92,10 @@ static void TKJITRequest(NSString *operation, void (^completion)(BOOL ok, NSStri
         completion(NO, @"The helper extension does not expose the request API.");
         return;
     }
+    SEL complete = NSSelectorFromString(@"setRequestCompletionBlock:");
+    SEL cancel   = NSSelectorFromString(@"setRequestCancellationBlock:");
+    SEL interrupt = NSSelectorFromString(@"setRequestInterruptionBlock:");
+    SEL begin    = NSSelectorFromString(@"beginExtensionRequestWithInputItems:completion:");
     __block BOOL finished = NO;
     void (^finish)(BOOL, NSString *) = ^(BOOL ok, NSString *message) {
         dispatch_async(dispatch_get_main_queue(), ^{
