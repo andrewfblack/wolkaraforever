@@ -36,9 +36,9 @@ jobs:
           set -euo pipefail
           fixture=wolkaraforever/tools/jit/Fixture
           cp -R build/stikjit-probe/StikJIT.xcframework "$fixture/"
-          xcodegen generate --spec "$fixture/project.yml" --project "$RUNNER_TEMP/StikJITHelperCompileFixture.xcodeproj"
-          xcodebuild -project "$RUNNER_TEMP/StikJITHelperCompileFixture.xcodeproj" \
+          xcodegen generate --spec "$fixture/project.yml" --project "$fixture"
+          xcodebuild -project "$fixture/StikJITHelperCompileFixture.xcodeproj" \
             -target JITHelperFixture -configuration Debug -sdk iphoneos \
-            -destination 'generic/platform=iOS' \
+            -destination 'generic/platform=iOS' SYMROOT="$RUNNER_TEMP/stikjit-products" \
             CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO build
           echo 'Unsigned helper fixture compiled; no host app or JIT activation tested.'
