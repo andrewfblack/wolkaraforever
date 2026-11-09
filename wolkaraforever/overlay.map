@@ -44,6 +44,8 @@ wolkaraforever/Shell/tests/test_localization.m tests/test_localization.m add
 # JIT: the app's own built-in helper and its host bridge
 wolkaraforever/JIT/Helper-Info.plist jit-helper/Info.plist add
 wolkaraforever/JIT/Helper.swift jit-helper/Helper.swift add
+wolkaraforever/JIT/JIT.h launcher/App/JIT.h add
+wolkaraforever/JIT/JIT.m launcher/App/JIT.m add
 # fixture-only, not overlaid: wolkaraforever/JIT/PreparationProbe.swift
 wolkaraforever/JIT/StikJIT-MPL-2.0.txt licenses/StikJIT-MPL-2.0.txt add
 wolkaraforever/JIT/StikJIT-PROVENANCE.md licenses/StikJIT-PROVENANCE.md add
