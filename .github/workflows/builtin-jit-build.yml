@@ -1,0 +1,37 @@
+# Built-in StikJIT External-JIT build.
+# The app embeds its own StikJIT helper extension, so a sideloaded install
+# (iLoader, SideStore, Sideloadly, LiveContainer) can prepare JIT without an
+# outside enabler. The runner only builds the unsigned IPA; install and
+# signing happen on a user's Mac.
+name: Built-in StikJIT External-JIT (unsigned)
+
+on:
+  push:
+    branches: [feature/builtin-stikjit]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  ipa:
+    runs-on: xcode-27
+    steps:
+      - uses: actions/checkout@v5
+      - name: Install XcodeGen
+        run: brew install xcodegen
+      - name: Build the unsigned External-JIT IPA (get-task-allow sideload)
+        run: TOLKARA_SYSTEM_ROOTS=NO wolkaraforever/tools/package_ipa.sh WolkaraForever-builtin-jit-unsigned.ipa
+      - name: Upload IPA
+        uses: actions/upload-artifact@v4
+        with:
+          name: WolkaraForever-builtin-jit-unsigned
+          path: build/platform/WolkaraForever-builtin-jit-unsigned.ipa
+          if-no-files-found: error
+      - name: Upload build logs if the build fails
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: builtin-jit-build-logs
+          path: build/platform/logs/
+          if-no-files-found: ignore
