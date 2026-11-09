@@ -99,3 +99,11 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
+
+## StikJIT (isolated JIT build tooling)
+
+The `wolkaraforever/tools/jit/` fixture vendors **StikJIT 2.0.1** without
+modifying its files (MPL-2.0; licence in that directory as
+`StikJIT-MPL-2.0.txt`). The framework performs the developer-service-mediated
+executable-region preparation on a helper extension. It is not part of the
+Developer-service or Local-signing builds.

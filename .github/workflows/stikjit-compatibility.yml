@@ -16,26 +16,24 @@ jobs:
         uses: actions/checkout@v5
       - name: Install XcodeGen
         run: brew install xcodegen
-      - name: Verify pinned MPL-2.0 framework and Swift import
+      - name: Verify the vendored framework
         run: |
           set -euo pipefail
           xcodebuild -version
-          mkdir -p build/stikjit-probe
-          cd build/stikjit-probe
-          curl -fLsS --retry 5 --retry-all-errors --retry-delay 3 -o StikJIT.xcframework.zip \
-            https://github.com/StikDebug/StikJIT/releases/download/2.0.1/StikJIT.xcframework.zip
-          echo 'c376687326a785f5ed1da8caca08adc709b56919019dd751bca059b92b175d95  StikJIT.xcframework.zip' | shasum -a 256 -c -
-          unzip -q StikJIT.xcframework.zip
+          cd wolkaraforever/tools/jit/Fixture
+          sha256sum -c StikJIT-VENDOR.sha256
+      - name: Typecheck the preparation entry point against the vendored framework
+        run: |
+          set -euo pipefail
           sdk=$(xcrun --sdk iphoneos --show-sdk-path)
           xcrun swiftc -typecheck -target arm64-apple-ios17.4 -sdk "$sdk" \
-            -F "$PWD/StikJIT.xcframework/ios-arm64" \
+            -F "$GITHUB_WORKSPACE/wolkaraforever/tools/jit/Fixture/StikJIT.xcframework/ios-arm64" \
             "$GITHUB_WORKSPACE/wolkaraforever/tools/jit/PreparationProbe.swift"
           echo 'StikJIT preparation API typecheck: PASS (not an integrated JIT build)'
-      - name: Compile isolated helper extension without signing
+      - name: Compile the embedded host and helper without signing
         run: |
           set -euo pipefail
           fixture=wolkaraforever/tools/jit/Fixture
-          cp -R build/stikjit-probe/StikJIT.xcframework "$fixture/"
           xcodegen generate --spec "$fixture/project.yml" --project "$fixture"
           xcodebuild -project "$fixture/StikJITHelperCompileFixture.xcodeproj" \
             -target JITProbeHost -configuration Debug -sdk iphoneos \

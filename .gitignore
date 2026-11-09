@@ -16,3 +16,7 @@ DerivedData/
 local.env
 __pycache__/
 Tolkara.xcodeproj/
+
+# Vendored JIT fixture framework (intentional; see StikJIT-PROVENANCE.md)
+!wolkaraforever/tools/jit/Fixture/StikJIT.xcframework/
+!wolkaraforever/tools/jit/Fixture/StikJIT.xcframework/**
