@@ -1,4 +1,5 @@
 #import <Foundation/Foundation.h>
+@class UIViewController;
 
 NS_ASSUME_NONNULL_BEGIN
 

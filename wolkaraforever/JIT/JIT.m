@@ -85,12 +85,13 @@ static void TKJITRequest(NSString *operation, void (^completion)(BOOL ok, NSStri
     item.userInfo = @{ @"operation": operation ?: @"enable",
                        @"pairing": pairing,
                        @"targetPid": @([NSProcessInfo processInfo].processIdentifier) };
-    SEL complete = NSSelectorFromString(@"setRequestCompletionBlock:");
-    SEL cancel   = NSSelectorFromString(@"setRequestCancellationBlock:");
-    SEL interrupt = NSSelectorFromString(@"setRequestInterruptionBlock:");
-    SEL begin    = NSSelectorFromString(@"beginExtensionRequestWithInputItems:completion:");
-    for (SEL sel in @[complete, cancel, interrupt, begin])
-        if (![helper respondsToSelector:sel]) { completion(NO, @"The helper extension does not expose the request API."); return; }
+    if (![helper respondsToSelector:NSSelectorFromString(@"setRequestCompletionBlock:")] ||
+        ![helper respondsToSelector:NSSelectorFromString(@"setRequestCancellationBlock:")] ||
+        ![helper respondsToSelector:NSSelectorFromString(@"setRequestInterruptionBlock:")] ||
+        ![helper respondsToSelector:NSSelectorFromString(@"beginExtensionRequestWithInputItems:completion:")]) {
+        completion(NO, @"The helper extension does not expose the request API.");
+        return;
+    }
     __block BOOL finished = NO;
     void (^finish)(BOOL, NSString *) = ^(BOOL ok, NSString *message) {
         dispatch_async(dispatch_get_main_queue(), ^{
