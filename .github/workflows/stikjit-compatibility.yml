@@ -22,7 +22,7 @@ jobs:
           xcodebuild -version
           mkdir -p build/stikjit-probe
           cd build/stikjit-probe
-          curl -fLsS --retry 2 -o StikJIT.xcframework.zip \
+          curl -fLsS --retry 5 --retry-all-errors --retry-delay 3 -o StikJIT.xcframework.zip \
             https://github.com/StikDebug/StikJIT/releases/download/2.0.1/StikJIT.xcframework.zip
           echo 'c376687326a785f5ed1da8caca08adc709b56919019dd751bca059b92b175d95  StikJIT.xcframework.zip' | shasum -a 256 -c -
           unzip -q StikJIT.xcframework.zip
