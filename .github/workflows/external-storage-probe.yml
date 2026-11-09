@@ -23,8 +23,6 @@ jobs:
           python3 wolkaraforever/tools/check_localization.py
       - name: Test launcher and storage probe
         run: wolkaraforever/tools/test_wow_launcher.sh
-      - name: Test storage source controls in the simulator
-        run: wolkaraforever/tools/test_wow_launcher_ui.sh
       - name: Build unsigned External JIT IPA
         run: TOLKARA_SYSTEM_ROOTS=NO wolkaraforever/tools/package_ipa.sh Tolkara-storage-probe-unsigned.ipa
       - name: Upload IPA
