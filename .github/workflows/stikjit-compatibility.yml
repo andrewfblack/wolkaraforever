@@ -38,7 +38,11 @@ jobs:
           cp -R build/stikjit-probe/StikJIT.xcframework "$fixture/"
           xcodegen generate --spec "$fixture/project.yml" --project "$fixture"
           xcodebuild -project "$fixture/StikJITHelperCompileFixture.xcodeproj" \
-            -target JITHelperFixture -configuration Debug -sdk iphoneos \
+            -target JITProbeHost -configuration Debug -sdk iphoneos \
             -destination 'generic/platform=iOS' SYMROOT="$RUNNER_TEMP/stikjit-products" \
             CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO build
-          echo 'Unsigned helper fixture compiled; no host app or JIT activation tested.'
+          app="$RUNNER_TEMP/stikjit-products/Debug-iphoneos/JITProbeHost.app"
+          test -d "$app/PlugIns/JITHelperFixture.appex"
+          test -f "$app/PlugIns/JITHelperFixture.appex/Frameworks/StikJIT.framework/StikJIT" \
+            || test -f "$app/Frameworks/StikJIT.framework/StikJIT"
+          echo 'Host, embedded helper and framework built; no JIT activation tested.'
