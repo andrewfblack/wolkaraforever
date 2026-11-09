@@ -441,6 +441,12 @@ do not blindly send that plist exchange to every discovered port. Validate the
 actual authenticated catalog/transport on the device and handle missing DDI
 services explicitly. See the primary debugserver/RSD references below.
 
+The iPad route-start diagnostic now includes the phase (load preferences, save
+configuration, reload configuration, stop previous route, or start tunnel) and
+the system error domain/code in `Documents/local-game-setup.txt` when setup
+fails. It does not log pairing material, device identifiers or tunnel traffic.
+This is diagnostic only; an iPad-side pass still requires a separate run.
+
 ### Remaining gates
 
 1. Verify direct route availability on M5/iPadOS 27, then the optional virtual
