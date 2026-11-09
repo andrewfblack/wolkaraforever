@@ -9,6 +9,7 @@ and historical records. It is not part of the end-user guide.
 | [guides/](guides/) | Build, maintenance, device, tooling, profile, contribution, and repository workflows. |
 | [technical/](technical/) | Implementation notes for the launcher, input, graphics, performance, and adapters. |
 | [testing/](testing/) | Test procedures and clean-install acceptance checks. |
+| [plans/BUILTIN_STIKJIT.md](plans/BUILTIN_STIKJIT.md) | Isolated built-in StikJIT feasibility and device gates. |
 | [archive/](archive/) | Completed design, investigation, and validation records retained for lineage; not current implementation instructions. |
 | [wiki/](wiki/) | Repository-backed source material for published Wiki pages. |
 | [validation/](validation/) | Immutable per-commit validation records. |

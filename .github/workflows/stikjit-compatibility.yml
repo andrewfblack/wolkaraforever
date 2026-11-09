@@ -1,0 +1,48 @@
+name: Built-in StikJIT compatibility probe
+
+on:
+  push:
+    branches: [feature/builtin-stikjit-prototype]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  framework:
+    runs-on: xcode-27
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v5
+      - name: Install XcodeGen
+        run: brew install xcodegen
+      - name: Verify pinned MPL-2.0 framework and Swift import
+        run: |
+          set -euo pipefail
+          xcodebuild -version
+          mkdir -p build/stikjit-probe
+          cd build/stikjit-probe
+          curl -fLsS --retry 2 -o StikJIT.xcframework.zip \
+            https://github.com/StikDebug/StikJIT/releases/download/2.0.1/StikJIT.xcframework.zip
+          echo 'c376687326a785f5ed1da8caca08adc709b56919019dd751bca059b92b175d95  StikJIT.xcframework.zip' | shasum -a 256 -c -
+          unzip -q StikJIT.xcframework.zip
+          sdk=$(xcrun --sdk iphoneos --show-sdk-path)
+          xcrun swiftc -typecheck -target arm64-apple-ios17.4 -sdk "$sdk" \
+            -F "$PWD/StikJIT.xcframework/ios-arm64" \
+            "$GITHUB_WORKSPACE/wolkaraforever/tools/jit/PreparationProbe.swift"
+          echo 'StikJIT preparation API typecheck: PASS (not an integrated JIT build)'
+      - name: Compile isolated helper extension without signing
+        run: |
+          set -euo pipefail
+          fixture=wolkaraforever/tools/jit/Fixture
+          cp -R build/stikjit-probe/StikJIT.xcframework "$fixture/"
+          xcodegen generate --spec "$fixture/project.yml" --project "$fixture"
+          xcodebuild -project "$fixture/StikJITHelperCompileFixture.xcodeproj" \
+            -target JITProbeHost -configuration Debug -sdk iphoneos \
+            -destination 'generic/platform=iOS' SYMROOT="$RUNNER_TEMP/stikjit-products" \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO build
+          app="$RUNNER_TEMP/stikjit-products/Debug-iphoneos/JITProbeHost.app"
+          test -d "$app/PlugIns/JITHelperFixture.appex"
+          test -f "$app/PlugIns/JITHelperFixture.appex/Frameworks/StikJIT.framework/StikJIT" \
+            || test -f "$app/Frameworks/StikJIT.framework/StikJIT"
+          echo 'Host, embedded helper and framework built; no JIT activation tested.'
