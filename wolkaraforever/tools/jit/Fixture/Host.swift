@@ -1,7 +1,8 @@
 import UIKit
 import UniformTypeIdentifiers
+import Darwin
 
-// This host proves that Xcode can embed the helper and its framework. It has
+// Isolated synthetic StikJIT gate; no game executable is loaded or executed.
 // no pairing file, no guest executable and no JIT activation path.
 @main
 final class TKJITFixtureHost: UIResponder, UIApplicationDelegate, UIDocumentPickerDelegate {
@@ -19,7 +20,7 @@ final class TKJITFixtureHost: UIResponder, UIApplicationDelegate, UIDocumentPick
         label.autoresizingMask = [.flexibleWidth, .flexibleHeight]
         label.textAlignment = .center
         label.numberOfLines = 0
-        label.text = "StikJIT test host. JIT and game launch are disabled."
+        label.text = "StikJIT test host. No game code is committed to or executed by this app."
         controller.view.backgroundColor = .systemBackground
         controller.view.addSubview(label)
         let importButton = UIButton(type: .system)
@@ -41,6 +42,12 @@ final class TKJITFixtureHost: UIResponder, UIApplicationDelegate, UIDocumentPick
         prepareButton.frame = CGRect(x: 20, y: 280, width: controller.view.bounds.width - 40, height: 52)
         prepareButton.autoresizingMask = [.flexibleWidth]
         controller.view.addSubview(prepareButton)
+        let enableButton = UIButton(type: .system)
+        enableButton.setTitle("Enable JIT and run arena self-test", for: .normal)
+        enableButton.addTarget(self, action: #selector(enableJIT), for: .touchUpInside)
+        enableButton.frame = CGRect(x: 20, y: 336, width: controller.view.bounds.width - 40, height: 52)
+        enableButton.autoresizingMask = [.flexibleWidth]
+        controller.view.addSubview(enableButton)
         window = UIWindow(frame: UIScreen.main.bounds)
         window?.rootViewController = controller
         window?.makeKeyAndVisible()
@@ -84,17 +91,42 @@ final class TKJITFixtureHost: UIResponder, UIApplicationDelegate, UIDocumentPick
         }
     }
 
-    @objc private func prepareDevice() {
+    @objc private func enableJIT() {
+        guard let pairing = readPairing() else {
+            status.text = "Import a valid pairing file for this device first."
+            return
+        }
+        status.text = "Requesting JIT preparation for this process…"
+        TKJITStartOperation("enable", pairing, getpid()) { [weak self] result in
+            guard let self else { return }
+            status.text = result + "\nWaiting for the helper to release the debugger…"
+            // The helper attaches for enable; the self test drives the brk protocol and
+            // then asks the helper to detach. All local to this process; no game code.
+            var report = [CChar](repeating: 0, count: 1024)
+            let length = report.withUnsafeMutableBufferPointer { buffer in
+                TKJITSelfTest(buffer.baseAddress, buffer.count)
+            }
+            let text = String(decoding: report.prefix(length == 0 ? 0 : Int(length)), as: UTF8.self)
+            status.text = text
+        }
+    }
+
+    private func readPairing() -> NSData? {
         guard let source = pairingFile,
               let attributes = try? FileManager.default.attributesOfItem(atPath: source.path),
               attributes[.type] as? FileAttributeType == .typeRegular,
               let size = attributes[.size] as? Int, size > 0, size <= 65536,
-              let pairing = try? Data(contentsOf: source), pairing.count == size else {
+              let bytes = try? Data(contentsOf: source), bytes.count == size else { return nil }
+        return bytes as NSData
+    }
+
+    @objc private func prepareDevice() {
+        guard let pairing = readPairing() else {
             status.text = "Import a valid pairing file for this device first."
             return
         }
         status.text = "Checking the device; JIT and game launch remain disabled."
-        TKJITStartPreparation(pairing) { [weak self] result in
+        TKJITStartOperation("prepare", pairing, 0) { [weak self] result in
             self?.status.text = result
         }
     }

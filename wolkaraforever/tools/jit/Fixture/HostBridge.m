@@ -8,12 +8,16 @@
 // Tolkara's normal Developer-service app.
 static NSMutableSet *TKActiveRequests;
 
-void TKJITStartPreparation(NSData *pairing, void (^completion)(NSString *status)) {
+void TKJITStartOperation(NSString *operation, NSData *pairing, int32_t targetPid, void (^completion)(NSString *status)) {
     if (!NSThread.isMainThread) {
-        dispatch_async(dispatch_get_main_queue(), ^{ TKJITStartPreparation(pairing, completion); });
+        dispatch_async(dispatch_get_main_queue(), ^{ TKJITStartOperation(operation, pairing, targetPid, completion); });
         return;
     }
-    if (!pairing.length || pairing.length>65536 || !completion) return;
+    if (!completion) return;
+    if (![operation isEqualToString:@"prepare"] && ![operation isEqualToString:@"enable"]) {
+        completion(@"Unknown helper operation; nothing ran."); return;
+    }
+    if (!pairing.length || pairing.length>65536) { completion(@"Pairing data is invalid; nothing ran."); return; }
     NSURL *helperURL=[NSBundle.mainBundle.builtInPlugInsURL URLByAppendingPathComponent:@"JITHelperFixture.appex"];
     NSString *identifier=[NSBundle bundleWithURL:helperURL].bundleIdentifier;
     if (!identifier.length) { completion(@"The embedded helper was not found; JIT was not enabled."); return; }
@@ -62,7 +66,7 @@ void TKJITStartPreparation(NSData *pairing, void (^completion)(NSString *status)
         (void)uuid; finish(@"The helper request was interrupted; JIT was not enabled.");
     });
     NSExtensionItem *item=[NSExtensionItem new];
-    item.userInfo=@{ @"operation":@"prepare", @"pairing":pairing };
+    item.userInfo=@{ @"operation":operation, @"pairing":pairing, @"targetPid":@(targetPid) };
     ((void (*)(id,SEL,id,id))objc_msgSend)(request,begin,@[item],^(NSUUID *uuid) {
         if (!uuid) finish(@"The helper did not start; JIT was not enabled.");
     });
