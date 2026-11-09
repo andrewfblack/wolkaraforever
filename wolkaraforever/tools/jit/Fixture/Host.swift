@@ -35,6 +35,12 @@ final class TKJITFixtureHost: UIResponder, UIApplicationDelegate, UIDocumentPick
         status.text = pairingFile.map { FileManager.default.fileExists(atPath: $0.path) } == true ?
             "A pairing file is stored. JIT is still disabled." : "No pairing file imported."
         controller.view.addSubview(status)
+        let prepareButton = UIButton(type: .system)
+        prepareButton.setTitle("Check DDI setup (no JIT)", for: .normal)
+        prepareButton.addTarget(self, action: #selector(prepareDevice), for: .touchUpInside)
+        prepareButton.frame = CGRect(x: 20, y: 280, width: controller.view.bounds.width - 40, height: 52)
+        prepareButton.autoresizingMask = [.flexibleWidth]
+        controller.view.addSubview(prepareButton)
         window = UIWindow(frame: UIScreen.main.bounds)
         window?.rootViewController = controller
         window?.makeKeyAndVisible()
@@ -75,6 +81,21 @@ final class TKJITFixtureHost: UIResponder, UIApplicationDelegate, UIDocumentPick
             // Never display an NSError description: a file provider may put
             // private paths or pairing material in it.
             status.text = "Pairing import failed; no JIT request was sent."
+        }
+    }
+
+    @objc private func prepareDevice() {
+        guard let source = pairingFile,
+              let attributes = try? FileManager.default.attributesOfItem(atPath: source.path),
+              attributes[.type] as? FileAttributeType == .typeRegular,
+              let size = attributes[.size] as? Int, size > 0, size <= 65536,
+              let pairing = try? Data(contentsOf: source), pairing.count == size else {
+            status.text = "Import a valid pairing file for this device first."
+            return
+        }
+        status.text = "Checking the device; JIT and game launch remain disabled."
+        TKJITStartPreparation(pairing as NSData) { [weak self] result in
+            self?.status.text = result
         }
     }
 }

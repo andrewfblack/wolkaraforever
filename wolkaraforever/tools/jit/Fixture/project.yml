@@ -5,12 +5,14 @@ targets:
   JITProbeHost:
     type: application
     platform: iOS
-    sources: [Host.swift]
+    sources: [Host.swift, HostBridge.m]
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: local.tolkara.jitfixture
         GENERATE_INFOPLIST_FILE: YES
+        INFOPLIST_FILE: Host-Info.plist
         INFOPLIST_KEY_UIApplicationSceneManifest_Generation: YES
+        SWIFT_OBJC_BRIDGING_HEADER: HostBridge.h
     dependencies:
       - target: JITHelperFixture
         embed: true
