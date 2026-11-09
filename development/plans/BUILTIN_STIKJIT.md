@@ -17,7 +17,8 @@ The release Swift module fails to import on the Intel Mac's Xcode 26.3
 Test the pinned release on GitHub's Xcode 27 runner before wiring a helper.
 The runner now typechecks `wolkaraforever/tools/jit/PreparationProbe.swift`
 against the release API. A typecheck proves only toolchain compatibility and
-the API shape, not a helper app extension or JIT on a device.
+the API shape, not JIT on a device. A separate, request-rejecting helper fixture
+is compiled without signing; it cannot enable JIT or run a guest.
 
 ## Integration gates
 

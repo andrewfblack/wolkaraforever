@@ -14,6 +14,8 @@ jobs:
     steps:
       - name: Check out source
         uses: actions/checkout@v5
+      - name: Install XcodeGen
+        run: brew install xcodegen
       - name: Verify pinned MPL-2.0 framework and Swift import
         run: |
           set -euo pipefail
@@ -29,3 +31,14 @@ jobs:
             -F "$PWD/StikJIT.xcframework/ios-arm64" \
             "$GITHUB_WORKSPACE/wolkaraforever/tools/jit/PreparationProbe.swift"
           echo 'StikJIT preparation API typecheck: PASS (not an integrated JIT build)'
+      - name: Compile isolated helper extension without signing
+        run: |
+          set -euo pipefail
+          fixture=wolkaraforever/tools/jit/Fixture
+          cp -R build/stikjit-probe/StikJIT.xcframework "$fixture/"
+          xcodegen generate --spec "$fixture/project.yml" --project "$RUNNER_TEMP/StikJITHelperCompileFixture.xcodeproj"
+          xcodebuild -project "$RUNNER_TEMP/StikJITHelperCompileFixture.xcodeproj" \
+            -target JITHelperFixture -configuration Debug -sdk iphoneos \
+            -destination 'generic/platform=iOS' \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO build
+          echo 'Unsigned helper fixture compiled; no host app or JIT activation tested.'

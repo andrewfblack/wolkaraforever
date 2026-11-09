@@ -1,0 +1,19 @@
+name: StikJITHelperCompileFixture
+options:
+  deploymentTarget: { iOS: "17.4" }
+targets:
+  JITHelperFixture:
+    type: app-extension
+    platform: iOS
+    sources:
+      - Helper.swift
+      - ../PreparationProbe.swift
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: local.tolkara.jitfixture.helper
+        GENERATE_INFOPLIST_FILE: YES
+        INFOPLIST_FILE: Info.plist
+        SWIFT_VERSION: "5.0"
+        APPLICATION_EXTENSION_API_ONLY: YES
+    dependencies:
+      - framework: StikJIT.xcframework
