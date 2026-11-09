@@ -1,0 +1,44 @@
+# WolkaraForever layer patch 0050 - external JIT: ask the helper to prepare
+# before declaring external JIT unavailable
+#
+# Why: when WolkaraForever was opened without JIT, external JIT was simply
+# refused, even when the app carries its own helper and the user sideloaded it
+# themselves. The app now asks its embedded helper to enable JIT (using the
+# pairing file iloader/SideStore installs prepared the same way husk does),
+# waiting for that to succeed before refusing; launching directly instead of
+# saying "open without JIT" is the whole point of carrying the helper. The
+# failure text is unchanged; developer-service and other execution modes are
+# untouched, and a prepared app never reaches this new path.
+# Needs: wolkaraforever/JIT/JIT.m overlaid to launcher/App/JIT.m (provides
+#       TKPrepareBuiltInJITIfNeeded).
+# Applies to: launcher/App/main.m
+# Upstream: candidate (not submitted).
+#
+diff --git a/launcher/App/main.m b/launcher/App/main.m
+index e53c496..fbaee45 100644
+--- a/launcher/App/main.m
++++ b/launcher/App/main.m
+@@ -11,6 +11,7 @@
+ #import "NativeGuest.h"
+ #import "SignedFileProbe.h"
+ #import "StartupActivity.h"
++#import "JIT.h"
+ #import "../Cloud/SteamCloudCoordinator.h"
+ #include "HostDiagnostics.h"
+ #include <errno.h>
+@@ -579,10 +580,12 @@ static BOOL PreparedFromOutside(void) { return hd_may_run_unsigned_code() || ng_
+         [self alert:@"Cannot Start App" message:error.localizedDescription];
+         return;
+     }
+-    // Opened without JIT: say so; the session stays usable.
++    // Prepare JIT through the app's own built-in helper when possible.
+     if(!PreparedFromOutside()) {
+-        [self alert:@"JIT Not Enabled" message:@"Tolkara was opened without JIT. Enable JIT for it with the tool you sideloaded it with "
+-            "(such as SideStore) or a JIT enabler such as StikDebug, then open it again."];
++        __weak typeof(self) weakSelf = self;
++        TKPrepareBuiltInJITIfNeeded(self, app.name, ^(BOOL prepared) {
++            if (prepared) [weakSelf performSelector:@selector(launchExternalJITApp:) withObject:app];
++        });
+         return;
+     }
+     [self endSession:[NSString stringWithFormat:@"%@ was started in this session. Close Tolkara in the app switcher and open it again to start an app.",app.name]];

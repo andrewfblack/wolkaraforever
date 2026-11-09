@@ -42,6 +42,19 @@ intent() {
         echo "$f $dst $(intent "$dst")"
     done
     echo "#"
+    echo "# JIT: the app's own built-in helper and its host bridge"
+    git ls-files wolkaraforever/JIT | while read -r f; do
+        case "$f" in
+            wolkaraforever/JIT/StikJIT.xcframework/*) dst=jit-helper/${f#wolkaraforever/JIT/};;
+            wolkaraforever/JIT/Helper-Info.plist) dst=jit-helper/Info.plist;;
+            wolkaraforever/JIT/Helper.swift) dst=jit-helper/Helper.swift;;
+            wolkaraforever/JIT/PreparationProbe.swift) echo "# fixture-only, not overlaid: $f"; continue;;
+            wolkaraforever/JIT/StikJIT-MPL-2.0.txt|wolkaraforever/JIT/StikJIT-PROVENANCE.md|wolkaraforever/JIT/StikJIT-VENDOR.sha256) dst=licenses/${f#wolkaraforever/JIT/};;
+            *) dst=launcher/App/${f#wolkaraforever/JIT/};;
+        esac
+        echo "$f $dst $(intent "$dst")"
+    done
+    echo "#"
     echo "# WoW: the launcher module, its test script source and its tests"
     git ls-files wolkaraforever/WoW | while read -r f; do
         case "$f" in

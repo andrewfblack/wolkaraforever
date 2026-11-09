@@ -1,0 +1,57 @@
+# WolkaraForever layer patch 0049 - external JIT: embed the app's own
+# built-in StikJIT helper extension and permit get-task-allow
+#
+# Why: a sideloaded WolkaraForever can prepare JIT only through a tool the
+# user installs separately (SideStore, StikDebug, or similar), and the iPad
+# refuses to create new VPN-style tunnels for our Developer-service build, so
+# the sideloaded external-JIT path could not prepare execution memory on its
+# own. The diagnostics app now carries its own helper extension with the
+# StikJIT framework vendored through the overlay; launching a guest no longer
+# needs an outside enabler once the app is signed with get-task-allow (as
+# iLoader/SideStore install it). No game behaviour and no Developer-service
+# behaviour changes; the integrated Developer-service target keeps its own
+# entitlements.
+# Needs: wolkaraforever/JIT/Helper.swift overlaid to jit-helper/Helper.swift
+# and wolkaraforever/JIT/JIT.m overlaid to launcher/App/JIT.m.
+# Applies to: project.yml
+# Upstream: candidate (not submitted).
+#
+diff --git a/project.yml b/project.yml
+index 0d350d7..9d0a26b 100644
+--- a/project.yml
++++ b/project.yml
+@@ -53,6 +53,7 @@ targetTemplates:
+       properties:
+         com.apple.developer.kernel.increased-memory-limit: true
+         com.apple.developer.kernel.extended-virtual-addressing: true
++        com.apple.security.get-task-allow: true
+     settings:
+       base:
+         PRODUCT_BUNDLE_IDENTIFIER: $(TOLKARA_BUNDLE_ID)
+@@ -75,6 +76,26 @@ targetTemplates:
+ targets:
+   TolkaraDiagnostics:
+     templates: [AppBase]
++    dependencies:
++      - target: TolkaraJITHelper
++        embed: true
++  TolkaraJITHelper:
++    type: app-extension
++    platform: iOS
++    sources:
++      - jit-helper/Helper.swift
++    settings:
++      base:
++        PRODUCT_BUNDLE_IDENTIFIER: $(TOLKARA_BUNDLE_ID).helper
++        PRODUCT_NAME: JITHelper
++        GENERATE_INFOPLIST_FILE: YES
++        INFOPLIST_FILE: jit-helper/Info.plist
++        SWIFT_VERSION: "5.0"
++        APPLICATION_EXTENSION_API_ONLY: YES
++        SKIP_INSTALL: YES
++    dependencies:
++      - framework: jit-helper/StikJIT.xcframework
++        embed: true
+   Tolkara:
+     templates: [AppBase]
+     sources: [authorization/App, authorization/Diagnostics, authorization/Control, authorization/Storage, authorization/Pairing/PairingWire.swift, authorization/Pairing/PairingIdentity.swift]

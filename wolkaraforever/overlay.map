@@ -41,6 +41,25 @@ wolkaraforever/Shell/main.m launcher/App/main.m replace
 wolkaraforever/Shell/tests/test_execution_mode.m tests/test_execution_mode.m replace
 wolkaraforever/Shell/tests/test_localization.m tests/test_localization.m add
 #
+# JIT: the app's own built-in helper and its host bridge
+wolkaraforever/JIT/Helper-Info.plist jit-helper/Info.plist add
+wolkaraforever/JIT/Helper.swift jit-helper/Helper.swift add
+# fixture-only, not overlaid: wolkaraforever/JIT/PreparationProbe.swift
+wolkaraforever/JIT/StikJIT-MPL-2.0.txt licenses/StikJIT-MPL-2.0.txt add
+wolkaraforever/JIT/StikJIT-PROVENANCE.md licenses/StikJIT-PROVENANCE.md add
+wolkaraforever/JIT/StikJIT-VENDOR.sha256 licenses/StikJIT-VENDOR.sha256 add
+wolkaraforever/JIT/StikJIT.xcframework/Info.plist jit-helper/StikJIT.xcframework/Info.plist add
+wolkaraforever/JIT/StikJIT.xcframework/ios-arm64/StikJIT.framework/Headers/StikJIT-Swift.h jit-helper/StikJIT.xcframework/ios-arm64/StikJIT.framework/Headers/StikJIT-Swift.h add
+wolkaraforever/JIT/StikJIT.xcframework/ios-arm64/StikJIT.framework/Info.plist jit-helper/StikJIT.xcframework/ios-arm64/StikJIT.framework/Info.plist add
+wolkaraforever/JIT/StikJIT.xcframework/ios-arm64/StikJIT.framework/Modules/StikJIT.swiftmodule/arm64-apple-ios.abi.json jit-helper/StikJIT.xcframework/ios-arm64/StikJIT.framework/Modules/StikJIT.swiftmodule/arm64-apple-ios.abi.json add
+wolkaraforever/JIT/StikJIT.xcframework/ios-arm64/StikJIT.framework/Modules/StikJIT.swiftmodule/arm64-apple-ios.private.swiftinterface jit-helper/StikJIT.xcframework/ios-arm64/StikJIT.framework/Modules/StikJIT.swiftmodule/arm64-apple-ios.private.swiftinterface add
+wolkaraforever/JIT/StikJIT.xcframework/ios-arm64/StikJIT.framework/Modules/StikJIT.swiftmodule/arm64-apple-ios.swiftdoc jit-helper/StikJIT.xcframework/ios-arm64/StikJIT.framework/Modules/StikJIT.swiftmodule/arm64-apple-ios.swiftdoc add
+wolkaraforever/JIT/StikJIT.xcframework/ios-arm64/StikJIT.framework/Modules/StikJIT.swiftmodule/arm64-apple-ios.swiftinterface jit-helper/StikJIT.xcframework/ios-arm64/StikJIT.framework/Modules/StikJIT.swiftmodule/arm64-apple-ios.swiftinterface add
+wolkaraforever/JIT/StikJIT.xcframework/ios-arm64/StikJIT.framework/Modules/module.modulemap jit-helper/StikJIT.xcframework/ios-arm64/StikJIT.framework/Modules/module.modulemap add
+wolkaraforever/JIT/StikJIT.xcframework/ios-arm64/StikJIT.framework/StikJIT jit-helper/StikJIT.xcframework/ios-arm64/StikJIT.framework/StikJIT add
+wolkaraforever/JIT/StikJIT.xcframework/ios-arm64/StikJIT.framework/legacy.js jit-helper/StikJIT.xcframework/ios-arm64/StikJIT.framework/legacy.js add
+wolkaraforever/JIT/StikJIT.xcframework/ios-arm64/StikJIT.framework/universal.js jit-helper/StikJIT.xcframework/ios-arm64/StikJIT.framework/universal.js add
+#
 # WoW: the launcher module, its test script source and its tests
 wolkaraforever/WoW/AddonArchive.swift launcher/WoW/AddonArchive.swift add
 wolkaraforever/WoW/AddonCredentialStore.h launcher/WoW/AddonCredentialStore.h add
