@@ -1,0 +1,31 @@
+name: Built-in StikJIT compatibility probe
+
+on:
+  push:
+    branches: [feature/builtin-stikjit-prototype]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  framework:
+    runs-on: xcode-27
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v5
+      - name: Verify pinned MPL-2.0 framework and Swift import
+        run: |
+          set -euo pipefail
+          xcodebuild -version
+          mkdir -p build/stikjit-probe
+          cd build/stikjit-probe
+          curl -fLsS --retry 2 -o StikJIT.xcframework.zip \
+            https://github.com/StikDebug/StikJIT/releases/download/2.0.1/StikJIT.xcframework.zip
+          echo 'c376687326a785f5ed1da8caca08adc709b56919019dd751bca059b92b175d95  StikJIT.xcframework.zip' | shasum -a 256 -c -
+          unzip -q StikJIT.xcframework.zip
+          printf 'import StikJIT\n' > probe.swift
+          sdk=$(xcrun --sdk iphoneos --show-sdk-path)
+          xcrun swiftc -typecheck -target arm64-apple-ios17.4 -sdk "$sdk" \
+            -F "$PWD/StikJIT.xcframework/ios-arm64" probe.swift
+          echo 'StikJIT Swift module import: PASS (not an integrated JIT build)'
