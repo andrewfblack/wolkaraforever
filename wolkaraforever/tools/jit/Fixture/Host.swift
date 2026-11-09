@@ -97,8 +97,8 @@ final class TKJITFixtureHost: UIResponder, UIApplicationDelegate, UIDocumentPick
             return
         }
         status.text = "Requesting JIT preparation for this process…"
-        TKJITStartOperation("enable", pairing, getpid()) { [weak self] result in
-            guard let self else { return }
+        TKJITStartOperation("enable", pairing, Int32(getpid())) { [weak self] result in
+            guard let result, let self else { return }
             status.text = result + "\nWaiting for the helper to release the debugger…"
             // The helper attaches for enable; the self test drives the brk protocol and
             // then asks the helper to detach. All local to this process; no game code.
@@ -111,13 +111,13 @@ final class TKJITFixtureHost: UIResponder, UIApplicationDelegate, UIDocumentPick
         }
     }
 
-    private func readPairing() -> NSData? {
+    private func readPairing() -> Data? {
         guard let source = pairingFile,
               let attributes = try? FileManager.default.attributesOfItem(atPath: source.path),
               attributes[.type] as? FileAttributeType == .typeRegular,
               let size = attributes[.size] as? Int, size > 0, size <= 65536,
               let bytes = try? Data(contentsOf: source), bytes.count == size else { return nil }
-        return bytes as NSData
+        return bytes
     }
 
     @objc private func prepareDevice() {
@@ -126,7 +126,7 @@ final class TKJITFixtureHost: UIResponder, UIApplicationDelegate, UIDocumentPick
             return
         }
         status.text = "Checking the device; JIT and game launch remain disabled."
-        TKJITStartOperation("prepare", pairing, 0) { [weak self] result in
+        TKJITStartOperation("prepare", pairing, Int32(0)) { [weak self] result in
             self?.status.text = result
         }
     }
