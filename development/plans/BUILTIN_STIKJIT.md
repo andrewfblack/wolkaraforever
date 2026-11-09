@@ -1,45 +1,38 @@
-# Built-in StikJIT: isolated feasibility gate
+# Built-in StikJIT
 
-The installed Developer-service app and its game data are **not** test targets.
-The experimental target is the separate External-JIT app, with no guest import
-or guest launch until executable memory has been prepared and the helper has
-detached. Keep the internal and SD game installations untouched.
+StikJIT is vendored at `wolkaraforever/JIT/StikJIT.xcframework` (2.0.1,
+copied byte-identically from the upstream release; SHA-256 recorded in
+`StikJIT-VENDOR.sha256`, license in `StikJIT-MPL-2.0.txt`, provenance in
+`StikJIT-PROVENANCE.md`). It is embedded in the External-JIT diagnostics
+app's new helper extension `TolkaraJITHelper.appex`, wired in by patches
+0049 and 0050.
 
-StikJIT 2.0.1 is MPL-2.0, pinned by SHA-256 in
-`.github/workflows/stikjit-compatibility.yml`. The XCFramework is downloaded
-into ignored build output, not committed. The app's MIT license and bundled
-third-party notices must remain accurate if a distributable build embeds it.
+## What is built
 
-## Measured prerequisite
+- The diagnostics app now carries `launcher/JITHelper/` (helper extension and
+  vendored framework) with the extension embedded by `TolkaraDiagnostics`.
+- Tap **Play** while JIT is not prepared: the app asks its own helper, with
+  an already-importing pairing file in `Documents/StikJIT/pairingFile.plist`,
+  through a private `NSExtension` request restricted to `operation=enable`.
+- If the process is not already prepared (`CS_DEBUGGED` is not set), the
+  request asks StikJIT to prepare the device. The existing `DebuggerArena`
+  `brk #0xf00d` protocol is unchanged; a prepared process can enter a guest
+  exactly as before.
 
-The release Swift module fails to import on the Intel Mac's Xcode 26.3
-(Swift interface parse errors). The older 1.9.0 framework fails there too.
-Test the pinned release on GitHub's Xcode 27 runner before wiring a helper.
-The runner now typechecks `wolkaraforever/tools/jit/PreparationProbe.swift`
-against the release API and compiles a standalone host with an embedded helper
-and framework. The host can import a pairing file into its own protected
-Documents folder, but does not send requests to the helper yet. The helper's
-only implemented operation prepares a device from bounded pairing data on a
-serial queue; it cannot attach a debugger, enable JIT, or run a guest. These
-build results prove neither a signed extension nor JIT on a device.
+## What the device still has to prove
 
-## Integration gates
+1. A sideload device on iPadOS 27 (not the Developer-service enrolled one)
+   accepts the app signed with `get-task-allow` and preserves the helper.
+2. The pairing file (created by iLoader) lets the helper finish DDI
+   preparation and detach before guest entry.
+3. The prepared arena is actually executable for a synthetic fixture.
 
-1. Keep the existing `DebuggerArena` `brk #0xf00d` region/detach protocol;
-   use StikJIT's developer-defined universal script. Never attach after guest
-   entry. Refuse guest entry while attached or without executable memory.
-2. Add a separately signed helper app extension to the External-JIT target
-   only. A process cannot debug itself. Require `get-task-allow`, Developer
-   Mode, a device-local pairing file, and a working *existing* LocalDevVPN.
-   Never reuse Husk's private pairing file or the Developer-service enrollment.
-3. Use a dedicated serial helper queue for preparation, attachment and
-   detachment. No fallback from a failed JIT method to guest entry.
-4. First device test: app and helper install together, DDI preparation,
-   debugger detach, then verify the prepared RX mapping with a synthetic
-   fixture. No game files are needed for this gate.
-5. Only after the fixture passes on the user's iPad may a separately confirmed
-   game-file import or SD-card launch be attempted. Preserve the existing app
-   and its internal game files throughout.
+Until (1)-(3) pass on the iPad, no game should be started through this
+build; the existing iPad Developer-service app and its game data are
+untouched.
+
+The paired CI run only produces an **unsigned** IPA for local signing; Sideloadly
+or iLoader signs it. No Mac Keychain or Apple private key enters GitHub.
 
 Husk's built-in method still requires LocalDevVPN. It avoids creating a new
 WolkaraForever VPN configuration, which the iPad currently rejects at
