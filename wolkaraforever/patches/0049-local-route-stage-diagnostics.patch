@@ -1,0 +1,55 @@
+# WolkaraForever layer patch 0049 - expose the failing local VPN route stage
+#
+# Diagnostic only: no route policy or retry behavior changes. The app writes the
+# result to Documents/local-game-setup.txt before guest code enters.
+# Applies to: authorization/App/LocalAuthorization.m
+# Upstream: candidate after the device diagnosis.
+#
+diff --git a/authorization/App/LocalAuthorization.m b/authorization/App/LocalAuthorization.m
+index 6feb7b1..31d4bde 100644
+--- a/authorization/App/LocalAuthorization.m
++++ b/authorization/App/LocalAuthorization.m
+@@ -45,6 +45,13 @@ static void TKWaitForStoppedRoute(NETunnelProviderManager *manager,CFTimeInterva
+         TKWaitForStoppedRoute(manager,deadline,completion);
+     });
+ }
++// Report only the public error domain/code and the route stage; never include
++// pairing records, device identifiers or tunnel traffic in this report.
++static NSString *TKRouteFailure(NSString *stage,NSError *error) {
++    if (!error) return [stage stringByAppendingString:@" failed without a system error."];
++    return [NSString stringWithFormat:@"%@ failed (%@:%ld): %@",stage,
++        error.domain?:@"unknown",(long)error.code,error.localizedDescription?:@"unknown"];
++}
+ @implementation TKLocalAuthorization
+ - (void)startAndProbeLocalRoute:(void (^)(NSString *))completion {
+     [self startAndProbeLocalRoute:0 completion:completion];
+@@ -133,7 +140,7 @@ static void TKWaitForStoppedRoute(NETunnelProviderManager *manager,CFTimeInterva
+ }
+ - (void)startLocalRoute:(void (^)(NSString *))completion {
+     [NETunnelProviderManager loadAllFromPreferencesWithCompletionHandler:^(NSArray<NETunnelProviderManager *> *managers,NSError *error) {
+-        if(error) {dispatch_async(dispatch_get_main_queue(),^{completion(error.localizedDescription);});return;}
++        if(error) {dispatch_async(dispatch_get_main_queue(),^{completion(TKRouteFailure(@"Load VPN preferences",error));});return;}
+         NETunnelProviderManager *selected=nil;
+         for(NETunnelProviderManager *candidate in managers) {
+             if([candidate.protocolConfiguration isKindOfClass:NETunnelProviderProtocol.class] &&
+@@ -151,16 +158,17 @@ static void TKWaitForStoppedRoute(NETunnelProviderManager *manager,CFTimeInterva
+         self.manager.enabled=YES;
+         self.manager.onDemandEnabled=NO;
+         [self.manager saveToPreferencesWithCompletionHandler:^(NSError *saveError) {
+-            if(saveError) {dispatch_async(dispatch_get_main_queue(),^{completion(saveError.localizedDescription);});return;}
++            if(saveError) {dispatch_async(dispatch_get_main_queue(),^{completion(TKRouteFailure(@"Save VPN configuration",saveError));});return;}
+             [self.manager loadFromPreferencesWithCompletionHandler:^(NSError *loadError) {
+-                if(loadError) {dispatch_async(dispatch_get_main_queue(),^{completion(loadError.localizedDescription);});return;}
++                if(loadError) {dispatch_async(dispatch_get_main_queue(),^{completion(TKRouteFailure(@"Reload VPN configuration",loadError));});return;}
+                 // Every cold app launch needs an unused helper transaction.
+                 // Stop only our own route and wait for actual OS teardown.
+                 [self.manager.connection stopVPNTunnel];
+                 TKWaitForStoppedRoute(self.manager,CACurrentMediaTime()+10,^(BOOL stopped) {
+                     NSError *startError=nil;
+                     BOOL requested=stopped && [self.manager.connection startVPNTunnelAndReturnError:&startError];
+-                    NSString *text=requested?@"Local route started; authentication is a separate step.":(startError.localizedDescription?:@"The previous local session did not stop in time.");
++                    NSString *text=requested?@"Local route started; authentication is a separate step.":
++                        stopped?TKRouteFailure(@"Start VPN tunnel",startError):@"Stop previous VPN route timed out.";
+                     dispatch_async(dispatch_get_main_queue(),^{completion(text);});
+                 });
+             }];
