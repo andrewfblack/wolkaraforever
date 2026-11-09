@@ -15,7 +15,9 @@ third-party notices must remain accurate if a distributable build embeds it.
 The release Swift module fails to import on the Intel Mac's Xcode 26.3
 (Swift interface parse errors). The older 1.9.0 framework fails there too.
 Test the pinned release on GitHub's Xcode 27 runner before wiring a helper.
-An import pass proves only toolchain compatibility, not JIT on a device.
+The runner now typechecks `wolkaraforever/tools/jit/PreparationProbe.swift`
+against the release API. A typecheck proves only toolchain compatibility and
+the API shape, not a helper app extension or JIT on a device.
 
 ## Integration gates
 
