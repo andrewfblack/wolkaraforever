@@ -44,3 +44,17 @@ jobs:
           test -f "$app/PlugIns/JITHelperFixture.appex/Frameworks/StikJIT.framework/StikJIT" \
             || test -f "$app/Frameworks/StikJIT.framework/StikJIT"
           echo 'Host, embedded helper and framework built; no JIT activation tested.'
+      - name: Package the unsigned fixture IPA for local signing
+        run: |
+          set -euo pipefail
+          app="$RUNNER_TEMP/stikjit-products/Debug-iphoneos/JITProbeHost.app"
+          mkdir -p build/fixture/Payload
+          ditto "$app" build/fixture/Payload/JITProbeHost.app
+          ( cd build/fixture && zip -qry ../StikJIT-fixture-unsigned.ipa Payload )
+          ls -lh build/StikJIT-fixture-unsigned.ipa
+      - name: Upload the unsigned fixture IPA
+        uses: actions/upload-artifact@v4
+        with:
+          name: StikJIT-fixture-unsigned
+          path: build/StikJIT-fixture-unsigned.ipa
+          if-no-files-found: error
