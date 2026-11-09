@@ -106,7 +106,9 @@ final class TKJITFixtureHost: UIResponder, UIApplicationDelegate, UIDocumentPick
             let length = report.withUnsafeMutableBufferPointer { buffer in
                 TKJITSelfTest(buffer.baseAddress, buffer.count)
             }
-            let text = String(decoding: report.prefix(length == 0 ? 0 : Int(length)), as: UTF8.self)
+            let byteCount = min(max(Int(length), 0), report.count)
+            let bytes = report.prefix(byteCount).map { UInt8(bitPattern: $0) }
+            let text = String(decoding: bytes, as: UTF8.self)
             status.text = text
         }
     }

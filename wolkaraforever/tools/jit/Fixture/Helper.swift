@@ -48,6 +48,7 @@ final class TKJITFixtureHelper: NSObject, NSExtensionRequestHandling {
                     case .ready: respond("device prepared; JIT not enabled", to: context)
                     case .unreachable: respond("device unreachable; JIT not enabled", to: context)
                     case .preparationFailed: respond("preparation failed; JIT not enabled", to: context)
+                    default: respond("preparation returned an unknown state; JIT not enabled", to: context)
                     }
                 }
             } catch {
