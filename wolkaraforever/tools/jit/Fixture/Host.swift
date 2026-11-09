@@ -94,7 +94,7 @@ final class TKJITFixtureHost: UIResponder, UIApplicationDelegate, UIDocumentPick
             return
         }
         status.text = "Checking the device; JIT and game launch remain disabled."
-        TKJITStartPreparation(pairing as NSData) { [weak self] result in
+        TKJITStartPreparation(pairing) { [weak self] result in
             self?.status.text = result
         }
     }
