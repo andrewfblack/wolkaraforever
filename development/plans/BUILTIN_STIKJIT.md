@@ -16,11 +16,12 @@ The release Swift module fails to import on the Intel Mac's Xcode 26.3
 (Swift interface parse errors). The older 1.9.0 framework fails there too.
 Test the pinned release on GitHub's Xcode 27 runner before wiring a helper.
 The runner now typechecks `wolkaraforever/tools/jit/PreparationProbe.swift`
-against the release API. A typecheck proves only toolchain compatibility and
-the API shape, not JIT on a device. A separate, request-rejecting helper fixture
-is compiled without signing inside a standalone host fixture; it cannot
-enable JIT or run a guest. The build checks that the helper and framework
-are embedded together before any device test.
+against the release API and compiles a standalone host with an embedded helper
+and framework. The host can import a pairing file into its own protected
+Documents folder, but does not send requests to the helper yet. The helper's
+only implemented operation prepares a device from bounded pairing data on a
+serial queue; it cannot attach a debugger, enable JIT, or run a guest. These
+build results prove neither a signed extension nor JIT on a device.
 
 ## Integration gates
 
