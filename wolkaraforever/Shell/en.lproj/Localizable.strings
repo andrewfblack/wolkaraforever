@@ -143,6 +143,13 @@
 "home.storage.test.success" = "Filesystem test passed";
 "home.storage.test.failed" = "Filesystem test failed";
 "home.storage.test.result" = "The %1$@ filesystem passed the small-file clone and atomic-swap checks. This does not yet prove that WoW can install or play from this drive.";
+"home.storage.source.internal" = "Game storage: iPad (the SD copy, if any, is kept).";
+"home.storage.source.sd" = "Game storage: SD card (the iPad copy is kept).";
+"home.storage.useInternal" = "Use game on iPad storage";
+"home.storage.useSD" = "Use game on SD card";
+"home.storage.chooseFirst" = "First use Probe a storage folder to select an empty folder on your SD card. Your iPad installation will not be moved or deleted.";
+"home.storage.confirmFresh" = "This selects the SD card for a separate, fresh Forever download. The existing game on iPad storage remains untouched. Only an empty World of Warcraft folder on the selected card can be used. If the card disconnects, no internal download will start automatically. Continue?";
+"home.storage.confirmSwitch" = "Use SD card";
 "home.storage.available" = "Folder is accessible";
 "home.storage.unavailable" = "Folder is unavailable";
 "home.storage.unknown" = "The folder could not be checked.";

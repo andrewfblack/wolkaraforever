@@ -27,8 +27,19 @@ for the game. An accessible folder is not proof that the drive can support updat
 With the drive attached and the app idle, **Test SD-card filesystem** asks for confirmation,
 then creates and removes a small, uniquely named test folder *inside the selected folder*.
 It checks the clone and atomic-swap operations used by the updater. It does not touch game
-files; a successful test does not enable external installation. If cleanup reports an error,
+files; a successful test does not automatically switch installation storage. If cleanup reports an error,
 inspect that test folder in Files before removing it yourself.
+
+**Experimental SD install on the external-install-switch branch:** Once the current download
+is idle, **Settings → Use game on SD card** asks for confirmation before reserving a *new*
+`World of Warcraft` folder under the folder selected by the probe. Tap **Install** for a
+separate download onto the card. This never migrates or deletes the iPad installation;
+**Settings → Use game on iPad storage** switches back to it. Only the selected installation
+can be played or updated. A disconnected card blocks the SD installation rather than
+starting another download on the iPad; switch back explicitly to use the internal copy.
+The first full SD installation is experimental and has not yet been validated on a device.
+Do not remove the card while an SD download or game session is active. Add-ons, backup,
+graphics-reset and locale-writing actions remain unavailable for the external copy.
 
 The first check of an imported installation still reads its game data. Later
 updates reuse checks for unchanged files, and long checks save their progress

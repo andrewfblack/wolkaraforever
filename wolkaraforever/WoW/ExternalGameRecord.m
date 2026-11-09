@@ -2,6 +2,7 @@
 #include <sys/stat.h>
 
 static NSString *const TKExternalGameRecordKey=@"WolkaraForever.ExternalGameRecordV1";
+static NSString *const TKExternalGameSelectedKey=@"WolkaraForever.ExternalGameSelectedV1";
 static NSString *const TKGameFolder=@"World of Warcraft";
 
 static void TKRecordError(NSError **error,NSString *reason) {
@@ -31,6 +32,14 @@ static NSString *TKGameRoot(NSString *folderPath,NSString *rootRelative) {
 }
 
 @implementation TKExternalGameRecord
++ (BOOL)isSelectedForForever {
+    // A selected but missing/corrupt record must fail closed, not silently
+    // redirect an install into Documents or start the local copy instead.
+    return [NSUserDefaults.standardUserDefaults boolForKey:TKExternalGameSelectedKey];
+}
++ (void)selectForForever:(BOOL)selected {
+    [NSUserDefaults.standardUserDefaults setBool:selected forKey:TKExternalGameSelectedKey];
+}
 + (BOOL)hasRecord {
     return TKRecord()!=nil && [TKRecord()[@"bookmark"] isKindOfClass:NSData.class];
 }
